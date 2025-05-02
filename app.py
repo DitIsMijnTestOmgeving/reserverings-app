@@ -1,105 +1,159 @@
 import streamlit as st
-import sqlite3
+from supabase import create_client
 import smtplib
 from email.mime.text import MIMEText
+import datetime
+import uuid
 
-# 1) Pagina-instellingen
-st.set_page_config(
-    page_title="Reservering Beheer",
-    page_icon="🍽️",
-    layout="wide"
-)
+# --- Supabase initialisatie ---
+url = st.secrets["supabase"]["url"]
+key = st.secrets["supabase"]["key"]
+supa = create_client(url, key)
 
-# 2) Laad SMTP- en eigenaargegevens uit secrets
+# --- Bedrijfslijst met e-mails ---
+def load_companies():
+    return {
+        "ABC-hekwerk": "info@heras.nl",
+        "Aesy Liften B.V.": "info@aesyliften.nl",
+        "Alura hekwerken": "info@alura.nl",
+        "Assa Abloy": "service.nl.crawford@assaabloy.com",
+        "Bodem Belang": "info@bodembelang.nl",
+        "ContrAll Inspectie": "info@contrall.nl",
+        "Espero BV": "info@espero.nl",
+        "G. v. Diepen": "info@vandiependakengevel.nl",
+        "Giant Security": "info@giant.nl",
+        "GP Groot": "info@gpgroot.nl",
+        "HB Bouw": "d.blom@hbbouwopmeer.nl",
+        "HB Controle": "info@hbcontrole.nu",
+        "Heras": "info@heras.nl",
+        "Hoefnagels": "info@hoefnagels.com",
+        "Klaver": "info@klavertechniek.nl",
+        "Novoferm": "industrie@novoferm.nl",
+        "Rijkhoff Installatietechniek": "info@rijkhoff.nl",
+        "Schermer installatie techniek": "info@schermerbv.nl",
+        "SkySafe Valbeveiliging": "info@skysafe.nl",
+        "Teeuwissen Rioolreiniging": "info@teeuwissen.com",
+        "Van Lierop": "info@vanlierop.nl",
+        "Vastenburg": "info@vastenburg.nl",
+        "Veldhuis": "info@veldhuis.nl"
+    }
+
+# --- E-mail setup ---
 owner_email   = st.secrets["owner"]["email"]
 smtp_server   = st.secrets["smtp"]["server"]
 smtp_port     = st.secrets["smtp"]["port"]
 smtp_user     = st.secrets["smtp"]["user"]
 smtp_password = st.secrets["smtp"]["password"]
 
-# 3) Functie om e-mail te sturen
 def send_owner_email(res_id, name, date, time):
+    base    = "https://limazv2gjxwr82bgefrl2t.streamlit.app"
+    approve = f"{base}/?approve=true&res_id={res_id}"
+    reject  = f"{base}/?reject=true&res_id={res_id}"
+    subject = f"[Reservering] Nieuwe aanvraag #{res_id}"
     body = f"""
-Nieuwe reservering #{res_id}
-Naam: {name}
-Datum: {date}
-Tijd:  {time}
+Er is een nieuwe reservering:
 
-Open de app om deze aanvraag te accepteren of te weigeren.
+• Nummer: {res_id}
+• Bedrijf: {name}
+• Datum:   {date}
+• Tijd:    {time}
+
+✅ Goedkeuren: {approve}
+❌ Afwijzen:   {reject}
 """
     msg = MIMEText(body)
-    msg["Subject"] = f"[Reservering] #{res_id} van {name}"
+    msg["Subject"] = subject
     msg["From"]    = smtp_user
     msg["To"]      = owner_email
+    with smtplib.SMTP(smtp_server, smtp_port) as s:
+        s.starttls()
+        s.login(smtp_user, smtp_password)
+        s.send_message(msg)
 
-    with smtplib.SMTP(smtp_server, smtp_port) as server:
-        server.starttls()
-        server.login(smtp_user, smtp_password)
-        server.send_message(msg)
+# --- One‑click handlers via URL‑params ---
+params = st.query_params
+if "approve" in params and "res_id" in params:
+    supa.table("bookings")\
+        .update({"status": "Goedgekeurd"})\
+        .eq("id", int(params["res_id"][0]))\
+        .execute()
+    st.success("✅ Reservering goedgekeurd via link!")
+elif "reject" in params and "res_id" in params:
+    supa.table("bookings")\
+        .update({"status": "Afgewezen"})\
+        .eq("id", int(params["res_id"][0]))\
+        .execute()
+    st.info("❌ Reservering afgewezen via link!")
 
-# 4) Database verbinding en schema
-def get_db_connection():
-    conn = sqlite3.connect('bookings.db', check_same_thread=False)
-    c = conn.cursor()
-    c.execute("""
-CREATE TABLE IF NOT EXISTS bookings (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    date TEXT NOT NULL,
-    time TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending'
-)
-""")
-    conn.commit()
-    return conn
+# --- Pagina‑configuratie ---
+st.set_page_config(page_title="Reservering Beheer", page_icon="🍽️", layout="wide")
+mode = st.sidebar.radio("Modus:", ["Reserveren", "Beheer"])
 
-# Gebruik een singleton voor de database
-conn = get_db_connection()
-c = conn.cursor()
+# --- Reserveren‑modus ---
+if mode == "Reserveren":
+    st.title("Reservering maken")
+    companies   = load_companies()
+    naam        = st.sidebar.selectbox("Bedrijf", list(companies.keys()))
+    email_input = companies[naam]
+    st.sidebar.text_input("E‑mail", value=email_input, disabled=True)
+    datum       = st.sidebar.date_input("Datum")
+    tijd        = st.sidebar.time_input("Tijd")
+    access      = st.sidebar.checkbox("Toegang nodig?")
+    ready = all([naam, email_input, datum, tijd])
+    if not ready:
+        st.sidebar.info("Vul alle velden in om te verzenden")
+    if st.sidebar.button("Verstuur aanvraag", disabled=not ready):
+        data = {
+            "name":   naam,
+            "email":  email_input,
+            "date":   datum.isoformat(),
+            "time":   tijd.strftime("%H:%M"),
+            "access": "Ja" if access else "Nee",
+            "status": "Wachten"
+        }
+        resp = supa.table("bookings").insert(data).execute()
+        res_id = resp.data[0]["id"]
+        send_owner_email(res_id, naam, data["date"], data["time"])
+        st.sidebar.success("✅ Aanvraag verzonden!")
 
-# Sidebar: Nieuwe reservering
-st.sidebar.header("Maak een nieuwe reservering")
-naam  = st.sidebar.text_input("Naam")
-datum = st.sidebar.date_input("Datum")
-tijd  = st.sidebar.time_input("Tijd")
-if st.sidebar.button("Verstuur aanvraag"):
-    c.execute(
-        "INSERT INTO bookings (name, date, time) VALUES (?, ?, ?)",
-        (naam, datum.isoformat(), tijd.strftime("%H:%M"))
-    )
-    conn.commit()
-    res_id = c.lastrowid
-    send_owner_email(res_id, naam, datum.isoformat(), tijd.strftime("%H:%M"))
-    st.sidebar.success("✅ Aanvraag verzonden! Je ontvangt spoedig bericht.")
+# --- Beheer‑modus ---
+else:
+    st.title("Beheer aanvragen")
+    pending = supa.table("bookings")\
+                  .select("*")\
+                  .neq("status", "Goedgekeurd")\
+                  .neq("status", "Afgewezen")\
+                  .order("date", {"ascending": True})\
+                  .execute().data
+    if not pending:
+        st.info("Geen openstaande aanvragen.")
+    for r in pending:
+        with st.expander(f"🔔 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
+            col1, col2 = st.columns(2)
+            if col1.button("✅ Goedkeuren", key=f"g{r['id']}"):
+                supa.table("bookings")\
+                    .update({"status": "Goedgekeurd"})\
+                    .eq("id", r["id"]).execute()
+                st.experimental_rerun()
+            if col2.button("❌ Afwijzen", key=f"a{r['id']}"):
+                supa.table("bookings")\
+                    .update({"status": "Afgewezen"})\
+                    .eq("id", r["id"]).execute()
+                st.experimental_rerun()
 
-# Hoofdscherm: beheer
-st.title("Reserveringsbeheer")
-
-# 5) Openstaande aanvragen
-st.subheader("Openstaande aanvragen")
-pending = c.execute(
-    "SELECT id, name, date, time FROM bookings WHERE status='pending'"
-).fetchall()
-for res_id, nm, dt, tm in pending:
-    st.write(f"• #{res_id} – {nm} op {dt} om {tm}")
-    col_acc, col_rej = st.columns(2)
-    if col_acc.button(f"✅ Accepteer {res_id}"):
-        c.execute("UPDATE bookings SET status='accepted' WHERE id=?", (res_id,))
-        conn.commit()
-        st.success(f"Reservering #{res_id} geaccepteerd")
-    if col_rej.button(f"❌ Weiger {res_id}"):
-        c.execute("UPDATE bookings SET status='rejected' WHERE id=?", (res_id,))
-        conn.commit()
-        st.info(f"Reservering #{res_id} geweigerd")
-
-# 6) Overzicht van alle reserveringen
-st.subheader("Alle reserveringen")
-all_rows = c.execute(
-    "SELECT name, date, time, status FROM bookings ORDER BY date, time"
-).fetchall()
-
-table = [
-    {"Naam": r[0], "Datum": r[1], "Tijd": r[2], "Status": r[3]}
-    for r in all_rows
-]
-st.dataframe(table, height=400)
+    st.subheader("Alle reserveringen")
+    all_rows = supa.table("bookings")\
+                  .select("*")\
+                  .order("date", {"ascending": True})\
+                  .execute().data
+    st.dataframe([
+        {
+            "Naam":    x["name"],
+            "E‑mail":  x["email"],
+            "Datum":   x["date"],
+            "Tijd":    x["time"],
+            "Toegang": x["access"],
+            "Status":  x["status"]
+        }
+        for x in all_rows
+    ], height=400)
