@@ -111,7 +111,7 @@ def send_owner_email(res_id, name, date, time):
         s.send_message(msg)
 
 # 5) URL-params afhandeling
-params = st.query_params
+params = st.experimental_get_query_params()
 handled = False
 if "approve" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Goedgekeurd"})\
