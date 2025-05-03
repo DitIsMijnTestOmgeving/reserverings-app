@@ -5,53 +5,26 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 # 0) PAGINA-INSTELLINGEN
-st.set_page_config(
-    page_title="Reservering Beheer",
-    page_icon="🍽️",
-    layout="wide"
-)
+st.set_page_config(page_title="Reservering Beheer", page_icon="🍽️", layout="wide")
 
-# Header met logo rechtsboven
-col_spacer, col_logo = st.columns([3, 1])
+col_spacer, col_logo = st.columns([2, 1])
 with col_logo:
-    st.image("Opmeer.png", width=300)
+    st.image("Opmeer.png", width=400)
 
-# 1) Supabase initialiseren
+# 1) Supabase
 url = st.secrets["supabase"]["url"]
 key = st.secrets["supabase"]["key"]
 supa = create_client(url, key)
 
-# 2) Bedrijfslijst
-
+# 2) Bedrijven
 def load_companies():
     return {
         "ABC-hekwerk": "info@heras.nl",
         "Aesy Liften B.V.": "info@aesyliften.nl",
-        "Alura hekwerken": "info@alura.nl",
-        "Assa Abloy": "service.nl.crawford@assaabloy.com",
-        "Bodem Belang": "info@bodembelang.nl",
-        "ContrAll Inspectie": "info@contrall.nl",
-        "Espero BV": "info@espero.nl",
-        "G. v. Diepen": "info@vandiependakengevel.nl",
-        "Giant Security": "info@giant.nl",
-        "GP Groot": "info@gpgroot.nl",
-        "HB Bouw": "d.blom@hbbouwopmeer.nl",
-        "HB Controle": "info@hbcontrole.nu",
-        "Heras": "info@heras.nl",
-        "Hoefnagels": "info@hoefnagels.com",
-        "Klaver": "info@klavertechniek.nl",
-        "Novoferm": "industrie@novoferm.nl",
-        "Rijkhoff Installatietechniek": "info@rijkhoff.nl",
-        "Schermer installatie techniek": "info@schermerbv.nl",
-        "SkySafe Valbeveiliging": "info@skysafe.nl",
-        "Teeuwissen Rioolreiniging": "info@teeuwissen.com",
-        "Van Lierop": "info@vanlierop.nl",
-        "Vastenburg": "info@vastenburg.nl",
         "Veldhuis": "info@veldhuis.nl"
     }
 
-# 3) Sleutel-lijst
-
+# 3) Sleutellijst
 def load_keys():
     return {
         "Bibliotheek Opmeer": "1, 2, 3",
@@ -87,8 +60,8 @@ def load_keys():
         "Zwembad De Weijver": "38, 39"
     }
 
-# 4) E-mail sturen
 
+# 4) Mail
 def send_owner_email(res_id, name, date, time):
     base_url = "https://ideal-lamp-7vw6p666j6v62rxr4-8501.app.github.dev"
     approve_link = f"{base_url}/?approve=true&res_id={res_id}"
@@ -105,14 +78,12 @@ def send_owner_email(res_id, name, date, time):
          <b>Nummer:</b> {res_id}<br>
          <b>Bedrijf:</b> {name}<br>
          <b>Datum:</b> {date}<br>
-         <b>Tijd:</b> {time}
-      </p>
+         <b>Tijd:</b> {time}</p>
       <p>
-        <a href=\"{approve_link}\" style=\"background-color: #4CAF50; color: white; padding:10px 20px; text-decoration:none; border-radius:4px;\">✅ Goedkeuren</a>
+        <a href="{approve_link}" style="background-color:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">✅ Goedkeuren</a>
         &nbsp;
-        <a href=\"{reject_link}\" style=\"background-color: #f44336; color: white; padding:10px 20px; text-decoration:none; border-radius:4px;\">❌ Weigeren</a>
-      </p>
-    </body></html>
+        <a href="{reject_link}" style="background-color:#f44336;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">❌ Weigeren</a>
+      </p></body></html>
     """
     msg.attach(MIMEText(html, "html"))
 
@@ -121,25 +92,36 @@ def send_owner_email(res_id, name, date, time):
         s.login(st.secrets["smtp"]["user"], st.secrets["smtp"]["password"])
         s.send_message(msg)
 
-# 5) Query-param afhandeling
+# 5) Linkverwerking
 params = st.query_params
 handled = False
 if "approve" in params and "res_id" in params:
-    supa.table("bookings").update({"status": "Goedgekeurd"}) \
-        .eq("id", int(params["res_id"][0])).execute()
+    supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
     st.query_params.clear()
     handled = True
 elif "reject" in params and "res_id" in params:
-    supa.table("bookings").update({"status": "Afgewezen"}) \
-        .eq("id", int(params["res_id"][0])).execute()
+    supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
     st.query_params.clear()
     handled = True
 
-# 6) Moduskeuze
+# 6) Modus
 if handled:
     mode = "Beheer"
+
+# Alleen toegang tot 'Beheer' als juiste wachtwoord is ingevoerd
+beheer_toegang = False
+beheer_optie = st.sidebar.radio("Modus:", ["Reserveren", "Beheer", "Sleutels"])
+
+if beheer_optie == "Beheer":
+    wachtwoord = st.sidebar.text_input("Beheerderswachtwoord", type="password")
+    if wachtwoord == st.secrets["beheer_wachtwoord"]:
+        beheer_toegang = True
+        mode = "Beheer"
+    else:
+        st.sidebar.warning("Geen toegang tot Beheer. Voer correct wachtwoord in.")
+        mode = "Reserveren"
 else:
-    mode = st.sidebar.radio("Modus:", ["Reserveren", "Beheer", "Sleutels"])
+    mode = beheer_optie
 
 # 7) Reserveren
 if mode == "Reserveren":
@@ -151,16 +133,12 @@ if mode == "Reserveren":
     datum = st.date_input("Datum")
     tijd = st.time_input("Tijd")
     access = st.checkbox("Toegang nodig?")
-
     locs = []
     if access:
         key_map = load_keys()
         locs = st.multiselect("Selecteer locatie(s)", sorted(key_map.keys()))
 
-    ready = all([naam, email_input, datum, tijd])
-    if not ready:
-        st.info("Vul alle velden in om te verzenden")
-    if st.button("Verstuur aanvraag", disabled=not ready):
+    if st.button("Verstuur aanvraag"):
         key_map = load_keys()
         data = {
             "name": naam,
@@ -180,58 +158,79 @@ if mode == "Reserveren":
 # 8) Beheer
 elif mode == "Beheer":
     st.title("Beheer aanvragen")
-    st.markdown("_Hieronder kun je openstaande aanvragen direct accepteren of afwijzen._")
+    st.markdown("_Hieronder kun je openstaande aanvragen accepteren, afwijzen of verwijderen._")
 
-    if st.button("🔑 Naar sleuteloverzicht"):
-        st.rerun()  # Dit wordt straks vervangen als je aparte pagina’s wilt maken
-
-    rows = supa.table("bookings") \
-               .select("*") \
-               .neq("status", "Goedgekeurd") \
-               .neq("status", "Afgewezen") \
-               .order("date") \
-               .execute().data
+    rows = supa.table("bookings").select("*") \
+        .neq("status", "Goedgekeurd").neq("status", "Afgewezen") \
+        .order("date").execute().data
 
     if not rows:
         st.info("Geen openstaande aanvragen.")
     for r in rows:
         with st.expander(f"🔔 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns([1, 1, 1])
             if col1.button("✅ Goedkeuren", key=f"g{r['id']}"):
                 supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", r["id"]).execute()
                 st.query_params.clear()
                 st.rerun()
-            if col2.button("❌ Weigeren", key=f"a{r['id']}"):
+            if col2.button("❌ Afwijzen", key=f"a{r['id']}"):
                 supa.table("bookings").update({"status": "Afgewezen"}).eq("id", r["id"]).execute()
                 st.query_params.clear()
                 st.rerun()
+            if col3.button("🗑️ Verwijder", key=f"d{r['id']}"):
+                supa.table("bookings").delete().eq("id", r["id"]).execute()
+                st.rerun()
 
-    all_rows = supa.table("bookings") \
-                  .select("*") \
-                  .order("date") \
-                  .execute().data
+    # Geaccepteerde en afgewezen aanvragen in tabel
+    all_rows = supa.table("bookings").select("*").order("date").execute().data
     st.subheader("Alle reserveringen")
-    st.dataframe([{
-        "Naam": x["name"],
-        "E-mail": x["email"],
-        "Datum": x["date"],
-        "Tijd": x["time"],
-        "Toegang": x["access"],
-        "Locaties": x.get("access_locations", ""),
-        "Sleutels": x.get("access_keys", ""),
-        "Status": x["status"]
-    } for x in all_rows], height=400)
+    st.dataframe([
+        {
+            "Naam": x["name"],
+            "E-mail": x["email"],
+            "Datum": x["date"],
+            "Tijd": x["time"],
+            "Toegang": x["access"],
+            "Locaties": x.get("access_locations", ""),
+            "Sleutels": x.get("access_keys", ""),
+            "Status": x["status"]
+        } for x in all_rows
+    ], height=450)
+
+    # Extra verwijderoptie via keuzelijst
+    st.subheader("Reservering verwijderen")
+
+    verwijderbare_rows = [
+        {
+            "id": x["id"],
+            "label": f"{x['name']} – {x['date']} {x['time']}",
+        } for x in all_rows
+    ]
+
+    if verwijderbare_rows:
+        opties = {r["label"]: r["id"] for r in verwijderbare_rows}
+        selectie = st.selectbox("Kies een reservering om te verwijderen:", list(opties.keys()))
+
+        if st.button("🗑️ Verwijder geselecteerde reservering"):
+            supa.table("bookings").delete().eq("id", opties[selectie]).execute()
+            st.success("Reservering verwijderd.")
+            st.rerun()
+    else:
+        st.info("Er zijn geen reserveringen om te verwijderen.")
+    
+
 
 # 9) Sleutels
 elif mode == "Sleutels":
     st.title("🔑 Sleuteloverzicht")
-    key_map = load_keys()
 
+    key_map = load_keys()
     bookings = supa.table("bookings").select("*").execute().data
     gebruikte_sleutels = set()
+
     for r in bookings:
         if r["status"] in ("Goedgekeurd", "Wachten"):
-            ks = r.get("access_keys", "")
+            ks = r.get("access_keys") or ""
             gebruikte_sleutels.update(k.strip() for k in ks.split(",") if k.strip())
 
     alle_sleutels = []
@@ -239,23 +238,32 @@ elif mode == "Sleutels":
         alle_sleutels.extend(s.strip() for s in sleutels.split(","))
     alle_sleutels = sorted(set(alle_sleutels), key=lambda x: int(x))
 
-    for i in range(0, len(alle_sleutels), 3):
-        cols = st.columns(3)
-        for j in range(3):
-            if i + j < len(alle_sleutels):
-                nr = alle_sleutels[i + j]
-                kleur = "#ff6961" if nr in gebruikte_sleutels else "#90ee90"
-                locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
-                with cols[j]:
-                    st.markdown(f"""
-                        <div title='{locatie}' style='
-                            background-color: {kleur};
-                            border-radius: 8px;
-                            padding: 16px;
-                            text-align: center;
-                            font-weight: bold;
-                            font-size: 20px;
-                            margin-bottom: 10px;'>
-                            {nr}
-                        </div>
-                    """, unsafe_allow_html=True)
+    html = """
+    <style>
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+        gap: 6px;
+        max-width: 100%;
+    }
+    .tegel {
+        background-color: #90ee90;
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        text-align: center;
+        line-height: 40px;
+        font-weight: bold;
+        font-size: 12px;
+    }
+    </style>
+    <div class='grid'>
+    """
+
+    for nr in alle_sleutels:
+        kleur = "#ff6961" if nr in gebruikte_sleutels else "#90ee90"
+        locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
+        html += f"<div class='tegel' title='{locatie}' style='background-color: {kleur};'>{nr}</div>"
+
+    html += "</div>"
+    st.markdown(html, unsafe_allow_html=True)
