@@ -14,15 +14,14 @@ if "approve" in params and "res_id" in params:
     supa = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
     st.success("✅ De reservering is goedgekeurd.")
-    st.toast("Reservering goedgekeurd")
-    st.balloons()
+    st.experimental_set_query_params()  # wist de URL parameters
     st.stop()
 
 elif "reject" in params and "res_id" in params:
     supa = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
-    st.error("❌ De reservering is afgewezen.")
-    st.toast("Reservering afgewezen")
+    st.success("❌ De reservering is afgewezen.")
+    st.experimental_set_query_params()  # wist de URL parameters
     st.stop()
 
 # 0) PAGINA-INSTELLINGEN
