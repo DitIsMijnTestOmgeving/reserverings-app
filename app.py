@@ -214,9 +214,8 @@ if mode == "Reserveren":
 
     # Tijdselectie tussen 08:00 en 18:00 in stappen van 30 minuten
     from datetime import datetime, timedelta
-    tijden = [(datetime(100, 1, 1, 8, 0) + timedelta(minutes=30*i)).time() for i in range(21)]
-    tijd = st.selectbox("Tijd", tijden)
-    st.caption("🕒 Kies een tijd tussen 08:00 en 18:00 (per 30 minuten).")
+    tijd = st.time_input("Tijd", value=datetime.time(8, 0), step=900)
+    tijd_str = tijd.strftime("%H:%M")
 
     access = st.checkbox("Toegang nodig?")
     locs = []
