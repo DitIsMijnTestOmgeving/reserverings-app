@@ -118,9 +118,10 @@ def load_keys():
 
 # 4) Mail
 def send_owner_email(res_id, name, date, time):
-    base_url = "https://reserveringsapp-opmeer.onrender.com"
-    approve_link = f"{base_url}/?approve=true&res_id={res_id}"
-    reject_link = f"{base_url}/?reject=true&res_id={res_id}"
+    base_url = "https://reserveringsapp-opmeer.onrender.com/?mode=sleutels"
+    approve_link = f"{base_url}&approve=true&res_id={res_id}"
+    reject_link = f"{base_url}&reject=true&res_id={res_id}"
+
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[Reservering] Nieuwe aanvraag #{res_id}"
