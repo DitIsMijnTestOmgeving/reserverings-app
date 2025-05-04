@@ -197,7 +197,7 @@ if beheer_toegang:
 # 7) Reserveren
 if mode == "Reserveren":
     st.title("Reservering maken")
-    
+
     st.markdown("""
         <style>
             .block-container {
@@ -206,15 +206,27 @@ if mode == "Reserveren":
         </style>
     """, unsafe_allow_html=True)
 
+    import locale
+    from datetime import time
+
+    # Stel Nederlandse taal in voor datum
+    try:
+        locale.setlocale(locale.LC_TIME, 'nl_NL.UTF-8')  # Linux/macOS
+    except:
+        try:
+            locale.setlocale(locale.LC_TIME, 'nld')  # Windows
+        except:
+            pass  # fallback
+
     companies = load_companies()
     naam = st.selectbox("Bedrijf", sorted(companies.keys()))
     email_input = companies[naam]
     st.text_input("E-mail", value=email_input, disabled=True)
-    datum = st.date_input("Datum")
 
-    # Tijdselectie tussen 08:00 en 18:00 in stappen van 30 minuten
-    from datetime import datetime, timedelta
-    tijd = st.time_input("Tijd", value=datetime.time(8, 0), step=900)
+    datum = st.date_input("Datum")
+    datum_nederlands = datum.strftime("%-d %B %Y")  # bijv. '17 mei 2025'
+
+    tijd = st.time_input("Tijd", value=time(8, 0), step=900)
     tijd_str = tijd.strftime("%H:%M")
 
     access = st.checkbox("Toegang nodig?")
@@ -224,13 +236,12 @@ if mode == "Reserveren":
         locs = st.multiselect("Selecteer locatie(s)", sorted(key_map.keys()))
 
     if st.button("Verstuur aanvraag"):
-
         key_map = load_keys()
         data = {
             "name": naam,
             "email": email_input,
             "date": datum.isoformat(),
-            "time": tijd.strftime("%H:%M"),
+            "time": tijd_str,
             "access": "Ja" if access else "Nee",
             "access_locations": ", ".join(locs),
             "access_keys": ", ".join(key_map[loc] for loc in locs),
@@ -238,7 +249,7 @@ if mode == "Reserveren":
         }
         res = supa.table("bookings").insert(data).execute()
         res_id = res.data[0]["id"]
-        send_owner_email(res_id, naam, data["date"], data["time"])
+        send_owner_email(res_id, naam, data["date"], tijd_str)
         st.success("✅ Aanvraag succesvol verzonden!")
 
 
