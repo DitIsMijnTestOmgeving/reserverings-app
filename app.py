@@ -211,7 +211,13 @@ if mode == "Reserveren":
     email_input = companies[naam]
     st.text_input("E-mail", value=email_input, disabled=True)
     datum = st.date_input("Datum")
-    tijd = st.time_input("Tijd")
+
+    # Tijdselectie tussen 08:00 en 18:00 in stappen van 30 minuten
+    from datetime import datetime, timedelta
+    tijden = [(datetime(100, 1, 1, 8, 0) + timedelta(minutes=30*i)).time() for i in range(21)]
+    tijd = st.selectbox("Tijd", tijden)
+    st.caption("🕒 Kies een tijd tussen 08:00 en 18:00 (per 30 minuten).")
+
     access = st.checkbox("Toegang nodig?")
     locs = []
     if access:
@@ -235,6 +241,7 @@ if mode == "Reserveren":
         res_id = res.data[0]["id"]
         send_owner_email(res_id, naam, data["date"], data["time"])
         st.success("✅ Aanvraag succesvol verzonden!")
+
 
 # 8) Beheer
 elif mode == "Beheer":
