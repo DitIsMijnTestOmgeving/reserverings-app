@@ -150,19 +150,6 @@ def send_owner_email(res_id, name, date, time):
         s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
         s.send_message(msg)
 
-# 5) Linkverwerking
-params = st.query_params
-handled = False
-if "approve" in params and "res_id" in params:
-    supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
-    st.query_params.clear()
-    handled = True
-elif "reject" in params and "res_id" in params:
-    supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
-    st.query_params.clear()
-    handled = True
-
-# 6) Modus
 # 6) Modus
 beheer_toegang = False
 query = st.query_params
@@ -171,9 +158,6 @@ query = st.query_params
 if query.get("mode") == "sleutels":
     mode = "Sleutels"
     beheer_toegang = True
-elif handled:
-    beheer_toegang = True
-    mode = "Beheer"
 else:
     st.sidebar.markdown("## Modus kiezen")
     basis_modi = ["Reserveren", "Beheer"]
