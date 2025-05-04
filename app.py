@@ -1,3 +1,4 @@
+import os
 import smtplib
 import streamlit as st
 from supabase import create_client
@@ -10,15 +11,17 @@ import datetime
 # 0) PAGINA-INSTELLINGEN
 st.set_page_config(page_title="Reservering Beheer", page_icon="🍽️", layout="wide")
 
+# Sidebar inklappen bij klik op de rechterkant van het scherm
 components.html("""
 <script>
-setTimeout(function() {
+document.addEventListener("click", function(event) {
     const sidebar = window.parent.document.querySelector('aside[data-testid="stSidebar"]');
-    const toggle = window.parent.document.querySelector('button[title="Collapse sidebar"]');
-    if (sidebar && toggle && sidebar.offsetWidth > 250) {
-        toggle.click();
+    const toggleButton = window.parent.document.querySelector('button[title="Collapse sidebar"]');
+
+    if (sidebar && toggleButton && !sidebar.contains(event.target)) {
+        toggleButton.click();
     }
-}, 1000);
+});
 </script>
 """, height=0)
 
@@ -27,8 +30,8 @@ with col_logo:
     st.image("Opmeer.png", width=400)
 
 # 1) Supabase
-url = st.secrets["supabase"]["url"]
-key = st.secrets["supabase"]["key"]
+url = os.environ["SUPABASE_URL"]
+key = os.environ["SUPABASE_KEY"]
 supa = create_client(url, key)
 
 # 2) Bedrijven
@@ -92,14 +95,14 @@ def load_keys():
 
 # 4) Mail
 def send_owner_email(res_id, name, date, time):
-    base_url = "https://ideal-lamp-7vw6p666j6v62rxr4-8501.app.github.dev"
+    base_url = "https://reserveringsapp-opmeer.onrender.com"
     approve_link = f"{base_url}/?approve=true&res_id={res_id}"
     reject_link = f"{base_url}/?reject=true&res_id={res_id}"
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[Reservering] Nieuwe aanvraag #{res_id}"
-    msg["From"] = st.secrets["smtp"]["user"]
-    msg["To"] = st.secrets["owner"]["email"]
+    msg["From"] = os.environ["SMTP_USER"]
+    msg["To"] = os.environ["OWNER_EMAIL"]
 
     html = f"""
     <html><body>
@@ -116,19 +119,14 @@ def send_owner_email(res_id, name, date, time):
     """
     msg.attach(MIMEText(html, "html"))
 
-    with smtplib.SMTP(st.secrets["smtp"]["server"], st.secrets["smtp"]["port"]) as s:
+    with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as s:
         s.starttls()
-        s.login(st.secrets["smtp"]["user"], st.secrets["smtp"]["password"])
+        s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
         s.send_message(msg)
 
-# 5) Toegang & Moduslogica
-beheer_toegang = st.session_state.get("beheer_toegang", False)
-mode = None
-
+# 5) Linkverwerking
 params = st.query_params
 handled = False
-
-# Goedkeur-/weigerlinks verwerken
 if "approve" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
     st.query_params.clear()
@@ -138,49 +136,67 @@ elif "reject" in params and "res_id" in params:
     st.query_params.clear()
     handled = True
 
-if handled:
-    st.session_state["beheer_toegang"] = True
-    beheer_toegang = True
-    mode = "Agenda"
-else:
-    if not beheer_toegang:
-        gekozen_optie = st.sidebar.radio("Modus:", ["Reserveren", "Beheer"])
-        if gekozen_optie == "Beheer":
-            wachtwoord = st.sidebar.text_input("Beheerderswachtwoord", type="password", key="beheer_wachtwoord")
-            if wachtwoord == "00":
-                st.session_state["beheer_toegang"] = True
-                st.rerun()  # Herlaad om toegang te geven
-            else:
-                st.sidebar.warning("Geen toegang. Voer correct wachtwoord in.")
-                st.stop()
-        else:
-            mode = gekozen_optie
-    else:
-        gekozen_submodus = st.sidebar.radio("Beheeronderdeel:", ["Beheer", "Sleutels", "Agenda"])
-        mode = gekozen_submodus
+# 6) Modus
+beheer_toegang = False
 
-# Als niets gekozen is of toegang is geweigerd
-if mode is None:
-    st.stop()
+if handled:
+    beheer_toegang = True
+    mode = "Beheer"
+else:
+    st.sidebar.markdown("## Modus kiezen")
+    basis_modi = ["Reserveren", "Beheer"]
+    gekozen_optie = st.sidebar.radio("Modus:", basis_modi)
+
+    # Zet automatisch de cursor in het wachtwoordveld
+    components.html(
+        """
+        <script>
+            const interval = setInterval(() => {
+                const el = window.parent.document.querySelector('input[type="password"]');
+                if (el) {
+                    el.focus();
+                    clearInterval(interval);
+                }
+            }, 100);
+        </script>
+        """,
+        height=0,
+    )
+
+    if gekozen_optie == "Beheer":
+        wachtwoord = st.sidebar.text_input("Beheerderswachtwoord", type="password")
+        if wachtwoord == "00":
+            beheer_toegang = True
+        else:
+            st.sidebar.warning("Geen toegang tot Sleutels. Voer correct wachtwoord in.")
+            st.stop()
+    else:
+        mode = "Reserveren"
+
+# Bepaal submodus als beheerder
+if beheer_toegang:
+    beheer_submodus = st.sidebar.radio("Beheeronderdeel:", ["Beheer", "Sleutels", "Agenda"], index=0)
+    mode = beheer_submodus
+
 
 # 7) Reserveren
 if mode == "Reserveren":
-    import datetime
     st.title("Reservering maken")
+    
+    st.markdown("""
+        <style>
+            .block-container {
+                padding-top: 1rem !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
     companies = load_companies()
     naam = st.selectbox("Bedrijf", sorted(companies.keys()))
     email_input = companies[naam]
     st.text_input("E-mail", value=email_input, disabled=True)
     datum = st.date_input("Datum")
-
-    tijdopties = [
-        (datetime.datetime.combine(datetime.date.today(), datetime.time(8, 0)) + datetime.timedelta(minutes=15 * i)).time()
-        for i in range(int((17 - 8) * 4))
-    ]
-    tijd_str_opties = [t.strftime("%H:%M") for t in tijdopties]
-    tijd_str = st.selectbox("Tijd", tijd_str_opties, index=4)
-    tijd = datetime.datetime.strptime(tijd_str, "%H:%M").time()
-
+    tijd = st.time_input("Tijd")
     access = st.checkbox("Toegang nodig?")
     locs = []
     if access:
@@ -188,6 +204,7 @@ if mode == "Reserveren":
         locs = st.multiselect("Selecteer locatie(s)", sorted(key_map.keys()))
 
     if st.button("Verstuur aanvraag"):
+
         key_map = load_keys()
         data = {
             "name": naam,
@@ -256,6 +273,7 @@ elif mode == "Beheer":
     if verwijderbare_rows:
         opties = {r["label"]: r["id"] for r in verwijderbare_rows}
         selectie = st.selectbox("Kies een reservering om te verwijderen:", list(opties.keys()))
+
         if st.button("🗑️ Verwijder geselecteerde reservering"):
             supa.table("bookings").delete().eq("id", opties[selectie]).execute()
             st.success("Reservering verwijderd.")
@@ -266,6 +284,7 @@ elif mode == "Beheer":
 # 9) Sleutels
 elif mode == "Sleutels":
     st.title("🔑 Sleuteloverzicht")
+
     key_map = load_keys()
     bookings = supa.table("bookings").select("*").execute().data
 
@@ -301,6 +320,7 @@ elif mode == "Sleutels":
     </style>
     <div class='grid'>
     """
+
     for nr in alle_sleutels:
         kleur = "#ff6961" if nr in gebruikte_sleutels else "#90ee90"
         locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
@@ -310,6 +330,7 @@ elif mode == "Sleutels":
     st.markdown(html, unsafe_allow_html=True)
 
     st.markdown("### 📋 Uitgegeven sleutels")
+
     sleutel_reserveringen = [
         {
             "Naam": r["name"],
@@ -330,42 +351,4 @@ elif mode == "Sleutels":
         st.dataframe(df_sleutels, use_container_width=True)
     else:
         st.info("Er zijn momenteel geen uitgegeven sleutels.")
-
-# 10) Agenda
-elif mode == "Agenda":
-    st.title("📅 Agenda overzicht")
-    all_rows = supa.table("bookings").select("*").order("date").execute().data
-
-    if all_rows:
-        import pandas as pd
-        df_agenda = pd.DataFrame([
-            {
-                "Datum": pd.to_datetime(r["date"]).strftime("%-d %B %Y"),
-                "Tijd": r["time"][:5],
-                "Bedrijf": r["name"],
-                "Locaties": r.get("access_locations", ""),
-                "Status": r["status"]
-            }
-            for r in all_rows
-        ])
-        df_agenda = df_agenda.sort_values(by=["Datum", "Tijd"])
-        st.dataframe(df_agenda, use_container_width=True)
-    else:
-        st.info("Er zijn geen reserveringen gepland.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
