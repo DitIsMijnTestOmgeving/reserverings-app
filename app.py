@@ -154,6 +154,7 @@ def send_owner_email(res_id, name, date, time):
 
 
 
+
 # 6) Modus
 beheer_toegang = False
 query = st.query_params
