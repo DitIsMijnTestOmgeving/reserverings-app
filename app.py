@@ -26,16 +26,30 @@ elif "reject" in params and "res_id" in params:
 # 0) PAGINA-INSTELLINGEN
 st.set_page_config(page_title="Reservering Beheer", page_icon="🍽️", layout="wide")
 
+# 0.1) Query-parameter check
 query = st.query_params
+beheer_toegang = False
+
 if query.get("mode") == ["sleutels"]:
     mode = "Sleutels"
     beheer_toegang = True
 else:
-    # hier komt je normale modusselectie met radioknoppen en wachtwoord
-    # bijv. zoals je nu hebt: 
-    # gekozen_optie = st.sidebar.radio(...) etc.
-    
-# Sidebar inklappen bij klik op de rechterkant van het scherm
+    st.sidebar.markdown("## Modus kiezen")
+    basis_modi = ["Reserveren", "Beheer"]
+    gekozen_optie = st.sidebar.radio("Modus:", basis_modi)
+
+    if gekozen_optie == "Beheer":
+        wachtwoord = st.sidebar.text_input("Beheerderswachtwoord", type="password")
+        if wachtwoord == "00":
+            beheer_toegang = True
+            mode = "Beheer"
+        else:
+            st.sidebar.warning("Geen toegang tot Sleutels. Voer correct wachtwoord in.")
+            st.stop()
+    else:
+        mode = "Reserveren"
+
+# 0.2) Sidebar inklappen bij klik op de rechterkant van het scherm
 components.html("""
 <script>
 document.addEventListener("click", function(event) {
@@ -48,6 +62,7 @@ document.addEventListener("click", function(event) {
 });
 </script>
 """, height=0)
+
 
 col_spacer, col_logo = st.columns([2, 1])
 with col_logo:
