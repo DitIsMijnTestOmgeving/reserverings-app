@@ -165,7 +165,7 @@ beheer_toegang = False
 query = st.query_params
 
 # Bepaal mode op basis van URL
-if query.get("mode") == ["sleutels"]:
+if query.get("mode") == "sleutels":
     mode = "Sleutels"
     beheer_toegang = True
 elif handled:
