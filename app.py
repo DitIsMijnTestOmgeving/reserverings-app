@@ -184,7 +184,7 @@ if handled:
 else:
     st.sidebar.markdown("## Modus kiezen")
     basis_modi = ["Reserveren", "Beheer"]
-    gekozen_optie = st.sidebar.radio("Modus:", basis_modi)
+    gekozen_optie = st.sidebar.radio("Modus:", basis_modi, key="modus_keuze")
 
     # Zet automatisch de cursor in het wachtwoordveld
     components.html(
@@ -214,7 +214,12 @@ else:
 
 # Bepaal submodus als beheerder
 if beheer_toegang:
-    beheer_submodus = st.sidebar.radio("Beheeronderdeel:", ["Beheer", "Sleutels", "Agenda"], index=0, key="beheer_kiezer")
+    beheer_submodus = st.sidebar.radio(
+        "Beheeronderdeel:",
+        ["Beheer", "Sleutels", "Agenda"],
+        index=0,
+        key="beheer_submodus"  # <- unieke key toegevoegd
+    )
     mode = beheer_submodus
 
 
