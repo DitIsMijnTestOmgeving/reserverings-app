@@ -224,7 +224,8 @@ if mode == "Reserveren":
     st.text_input("E-mail", value=email_input, disabled=True)
 
     datum = st.date_input("Datum")
-    datum_nederlands = datum.strftime("%-d %B %Y")  # bijv. '17 mei 2025'
+    datum_nederlands = datum.strftime("%d %B %Y").lstrip("0")
+    st.markdown(f"Geselecteerde datum: **{datum_nederlands}**")
 
     tijd = st.time_input("Tijd", value=time(8, 0), step=900)
     tijd_str = tijd.strftime("%H:%M")
