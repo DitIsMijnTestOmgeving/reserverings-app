@@ -29,7 +29,6 @@ elif "reject" in params and "res_id" in params:
     st.error("❌ De reservering is afgewezen.")
     st.stop()
 
-
 # PAGINA-INSTELLINGEN
 st.set_page_config(page_title="Reservering Beheer", page_icon="🍽️", layout="wide")
 
