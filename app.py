@@ -176,15 +176,33 @@ elif "reject" in params and "res_id" in params:
     handled = True
 
 # 6) Modus
+# 6) Modus
 beheer_toegang = False
+query = st.query_params
 
-if handled:
+# Bepaal mode op basis van URL
+if query.get("mode") == ["sleutels"]:
+    mode = "Sleutels"
+    beheer_toegang = True
+elif handled:
     beheer_toegang = True
     mode = "Beheer"
 else:
     st.sidebar.markdown("## Modus kiezen")
     basis_modi = ["Reserveren", "Beheer"]
     gekozen_optie = st.sidebar.radio("Modus:", basis_modi, key="modus_keuze")
+
+    if gekozen_optie == "Beheer":
+        wachtwoord = st.sidebar.text_input("Beheerderswachtwoord", type="password")
+        if wachtwoord == "00":
+            beheer_toegang = True
+            mode = "Beheer"
+        else:
+            st.sidebar.warning("Geen toegang tot Sleutels. Voer correct wachtwoord in.")
+            st.stop()
+    else:
+        mode = "Reserveren"
+
 
     # Zet automatisch de cursor in het wachtwoordveld
     components.html(
