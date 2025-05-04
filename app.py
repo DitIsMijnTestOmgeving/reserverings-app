@@ -36,7 +36,7 @@ if query.get("mode") == ["sleutels"]:
 else:
     st.sidebar.markdown("## Modus kiezen")
     basis_modi = ["Reserveren", "Beheer"]
-    gekozen_optie = st.sidebar.radio("Modus:", basis_modi)
+    gekozen_optie = st.sidebar.radio("Modus:", basis_modi, key="modus_kiezer")
 
     if gekozen_optie == "Beheer":
         wachtwoord = st.sidebar.text_input("Beheerderswachtwoord", type="password")
@@ -214,7 +214,7 @@ else:
 
 # Bepaal submodus als beheerder
 if beheer_toegang:
-    beheer_submodus = st.sidebar.radio("Beheeronderdeel:", ["Beheer", "Sleutels", "Agenda"], index=0)
+    beheer_submodus = st.sidebar.radio("Beheeronderdeel:", ["Beheer", "Sleutels", "Agenda"], index=0, key="beheer_kiezer")
     mode = beheer_submodus
 
 
