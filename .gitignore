@@ -1,2 +1,27 @@
+# Gevoelige gegevens
 .streamlit/secrets.toml
+.secrets/
+.env
+
+# Lokale database
 bookings.db
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE/Editor instellingen
+.vscode/
+.idea/
+
+# Log- en tijdelijke bestanden
+*.log
+*.tmp
+
+# Streamlit cache
+.streamlit/
+
+# Systeembestanden
+.DS_Store
+Thumbs.db

@@ -1,3 +1,4 @@
+# app.py
 import os
 import smtplib
 import streamlit as st
@@ -7,6 +8,8 @@ from email.mime.text import MIMEText
 import streamlit.components.v1 as components
 import pandas as pd
 import datetime
+from datetime import time
+import locale
 
 # directe goedkeur/afwijs via URL-query
 params = st.query_params
@@ -23,33 +26,10 @@ elif "reject" in params and "res_id" in params:
     st.error("❌ De reservering is afgewezen.")
     st.stop()
 
-# 0) PAGINA-INSTELLINGEN
+# PAGINA-INSTELLINGEN
 st.set_page_config(page_title="Reservering Beheer", page_icon="🍽️", layout="wide")
 
-# 0.1) Query-parameter check
-query = st.query_params
-beheer_toegang = False
-
-if query.get("mode") == ["sleutels"]:
-    mode = "Sleutels"
-    beheer_toegang = True
-else:
-    st.sidebar.markdown("## Modus kiezen")
-    basis_modi = ["Reserveren", "Beheer"]
-    gekozen_optie = st.sidebar.radio("Modus:", basis_modi, key="modus_kiezer")
-
-    if gekozen_optie == "Beheer":
-        wachtwoord = st.sidebar.text_input("Beheerderswachtwoord", type="password")
-        if wachtwoord == "00":
-            beheer_toegang = True
-            mode = "Beheer"
-        else:
-            st.sidebar.warning("Geen toegang tot Sleutels. Voer correct wachtwoord in.")
-            st.stop()
-    else:
-        mode = "Reserveren"
-
-# 0.2) Sidebar inklappen bij klik op de rechterkant van het scherm
+# Sidebar inklappen
 components.html("""
 <script>
 document.addEventListener("click", function(event) {
@@ -63,15 +43,19 @@ document.addEventListener("click", function(event) {
 </script>
 """, height=0)
 
-
-col_spacer, col_logo = st.columns([2, 1])
-with col_logo:
-    st.image("Opmeer.png", width=400)
-
-# 1) Supabase
+# Supabase
 url = os.environ["SUPABASE_URL"]
 key = os.environ["SUPABASE_KEY"]
 supa = create_client(url, key)
+
+# Taalinstelling
+try:
+    locale.setlocale(locale.LC_TIME, 'nl_NL.UTF-8')
+except:
+    try:
+        locale.setlocale(locale.LC_TIME, 'nld')
+    except:
+        pass
 
 # 2) Bedrijven
 def load_companies():
@@ -219,16 +203,6 @@ else:
         """,
         height=0,
     )
-
-    if gekozen_optie == "Beheer":
-        wachtwoord = st.sidebar.text_input("Beheerderswachtwoord", type="password")
-        if wachtwoord == "00":
-            beheer_toegang = True
-        else:
-            st.sidebar.warning("Geen toegang tot Sleutels. Voer correct wachtwoord in.")
-            st.stop()
-    else:
-        mode = "Reserveren"
 
 # Bepaal submodus als beheerder
 if beheer_toegang:
