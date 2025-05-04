@@ -26,6 +26,15 @@ elif "reject" in params and "res_id" in params:
 # 0) PAGINA-INSTELLINGEN
 st.set_page_config(page_title="Reservering Beheer", page_icon="🍽️", layout="wide")
 
+query = st.query_params
+if query.get("mode") == ["sleutels"]:
+    mode = "Sleutels"
+    beheer_toegang = True
+else:
+    # hier komt je normale modusselectie met radioknoppen en wachtwoord
+    # bijv. zoals je nu hebt: 
+    # gekozen_optie = st.sidebar.radio(...) etc.
+    
 # Sidebar inklappen bij klik op de rechterkant van het scherm
 components.html("""
 <script>
