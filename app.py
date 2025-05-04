@@ -8,20 +8,19 @@ import streamlit.components.v1 as components
 import pandas as pd
 import datetime
 
-# DIRECTE LINK-VERWERKING (bijvoorbeeld via mail op mobiel)
+# directe goedkeur/afwijs via URL-query
 params = st.query_params
 if "approve" in params and "res_id" in params:
     supa = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
     st.success("✅ De reservering is goedgekeurd.")
-    st.experimental_set_query_params()  # wist de URL parameters
+    st.balloons()
     st.stop()
 
 elif "reject" in params and "res_id" in params:
     supa = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
-    st.success("❌ De reservering is afgewezen.")
-    st.experimental_set_query_params()  # wist de URL parameters
+    st.error("❌ De reservering is afgewezen.")
     st.stop()
 
 # 0) PAGINA-INSTELLINGEN
