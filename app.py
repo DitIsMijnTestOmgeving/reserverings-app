@@ -8,6 +8,23 @@ import streamlit.components.v1 as components
 import pandas as pd
 import datetime
 
+# DIRECTE LINK-VERWERKING (bijvoorbeeld via mail op mobiel)
+params = st.query_params
+if "approve" in params and "res_id" in params:
+    supa = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+    supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
+    st.success("✅ De reservering is goedgekeurd.")
+    st.toast("Reservering goedgekeurd")
+    st.balloons()
+    st.stop()
+
+elif "reject" in params and "res_id" in params:
+    supa = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+    supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
+    st.error("❌ De reservering is afgewezen.")
+    st.toast("Reservering afgewezen")
+    st.stop()
+
 # 0) PAGINA-INSTELLINGEN
 st.set_page_config(page_title="Reservering Beheer", page_icon="🍽️", layout="wide")
 
