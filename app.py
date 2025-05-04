@@ -16,15 +16,17 @@ params = st.query_params
 if "approve" in params and "res_id" in params:
     supa = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
-    st.success("✅ De reservering is goedgekeurd.")
+    st.success("✅ De reservering is goedgekeurd. Je wordt doorgestuurd naar het sleuteloverzicht...")
     st.balloons()
-    st.stop()
+    st.experimental_set_query_params(mode="sleutels")
+    st.rerun()
 
 elif "reject" in params and "res_id" in params:
     supa = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
-    st.error("❌ De reservering is afgewezen.")
-    st.stop()
+    st.error("❌ De reservering is afgewezen. Je wordt doorgestuurd naar het sleuteloverzicht...")
+    st.experimental_set_query_params(mode="sleutels")
+    st.rerun()
 
 # PAGINA-INSTELLINGEN
 st.set_page_config(page_title="Reservering Beheer", page_icon="🍽️", layout="wide")
