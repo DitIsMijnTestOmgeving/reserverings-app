@@ -11,6 +11,20 @@ import datetime
 from datetime import time
 import locale
 
+# directe goedkeur/afwijs via URL-query
+params = st.query_params
+if "approve" in params and "res_id" in params:
+    supa = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+    supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
+    st.success("✅ De reservering is goedgekeurd.")
+    st.balloons()
+    st.stop()
+
+elif "reject" in params and "res_id" in params:
+    supa = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+    supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
+    st.error("❌ De reservering is afgewezen.")
+    st.stop()
 
 
 # PAGINA-INSTELLINGEN
@@ -105,6 +119,8 @@ def load_keys():
 
 # 4) Mail
 def send_owner_email(res_id, name, date, time):
+    approve_link = f"https://reserveringsapp-opmeer.onrender.com/?approve=true&res_id={res_id}"
+    reject_link = f"https://reserveringsapp-opmeer.onrender.com/?reject=true&res_id={res_id}"
     sleutels_link = "https://reserveringsapp-opmeer.onrender.com/?mode=sleutels"
 
     msg = MIMEMultipart("alternative")
@@ -120,16 +136,22 @@ def send_owner_email(res_id, name, date, time):
          <b>Datum:</b> {date}<br>
          <b>Tijd:</b> {time}</p>
       <p>
-        <a href="{sleutels_link}" style="background-color:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">🔑 Bekijk in sleuteloverzicht</a>
+        <a href="{approve_link}" style="background-color:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">✅ Goedkeuren</a>
+        &nbsp;
+        <a href="{reject_link}" style="background-color:#f44336;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">❌ Weigeren</a>
+        &nbsp;
+        <a href="{sleutels_link}" style="background-color:#2196F3;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">🔑 Sleuteloverzicht</a>
       </p>
     </body></html>
     """
+
     msg.attach(MIMEText(html, "html"))
 
     with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as s:
         s.starttls()
         s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
         s.send_message(msg)
+
 
 
 # 6) Modus
