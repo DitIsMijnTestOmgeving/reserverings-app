@@ -11,17 +11,20 @@ import datetime
 from datetime import time
 import locale
 
+# Supabase
+url = os.environ["SUPABASE_URL"]
+key = os.environ["SUPABASE_KEY"]
+supa = create_client(url, key)
+
 # directe goedkeur/afwijs via URL-query
 params = st.query_params
 if "approve" in params and "res_id" in params:
-    supa = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
     st.success("✅ De reservering is goedgekeurd.")
     st.balloons()
     st.stop()
 
 elif "reject" in params and "res_id" in params:
-    supa = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
     st.error("❌ De reservering is afgewezen.")
     st.stop()
@@ -44,10 +47,7 @@ document.addEventListener("click", function(event) {
 </script>
 """, height=0)
 
-# Supabase
-url = os.environ["SUPABASE_URL"]
-key = os.environ["SUPABASE_KEY"]
-supa = create_client(url, key)
+
 
 # Taalinstelling
 try:
