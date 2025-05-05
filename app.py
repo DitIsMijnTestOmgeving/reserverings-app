@@ -471,26 +471,15 @@ elif mode == "Uitgifte":
     gekozen = opties[selectie]
 
     if st.button("📄 Genereer afgifteformulier"):
-        from docx import Document
-        from io import BytesIO
-        import tempfile
-
         doc = Document("Sleutel Afgifte Formulier.docx")
 
-        # Vervang placeholders
         for para in doc.paragraphs:
-            if "BEDRIJF" in para.text:
-                para.text = para.text.replace("BEDRIJF", gekozen["name"])
-            if "DATUM" in para.text:
-                para.text = para.text.replace("DATUM", gekozen["date"])
-            if "TIJD" in para.text:
-                para.text = para.text.replace("TIJD", gekozen["time"])
-            if "SLEUTELS" in para.text:
-                para.text = para.text.replace("SLEUTELS", gekozen.get("access_keys", ""))
-            if "LOCATIES" in para.text:
-                para.text = para.text.replace("LOCATIES", gekozen.get("access_locations", ""))
+            para.text = para.text.replace("BEDRIJF", gekozen["name"])
+            para.text = para.text.replace("DATUM", gekozen["date"])
+            para.text = para.text.replace("TIJD", gekozen["time"])
+            para.text = para.text.replace("SLEUTELS", gekozen.get("access_keys", ""))
+            para.text = para.text.replace("LOCATIES", gekozen.get("access_locations", ""))
 
-        # Download
         buffer = BytesIO()
         doc.save(buffer)
         buffer.seek(0)
@@ -501,42 +490,3 @@ elif mode == "Uitgifte":
             file_name="Sleutel_Afgifte_Formulier.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
-
-        # Toegevoegde Agenda-functionaliteit
-if mode == "Agenda":
-    st.title("🗓️ Sleuteluitgifte bevestigen")
-    goedgekeurd = supa.table("bookings").select("*").eq("status", "Goedgekeurd").execute().data
-
-    if not goedgekeurd:
-        st.info("Er zijn geen goedgekeurde reserveringen.")
-    else:
-        for r in goedgekeurd:
-            with st.expander(f"📄 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
-                st.markdown(f"**Bedrijf:** {r['name']}")
-                st.markdown(f"**Datum:** {r['date']}")
-                st.markdown(f"**Tijd:** {r['time']}")
-                st.markdown(f"**Locaties:** {r.get('access_locations', '')}")
-                st.markdown(f"**Sleutels:** {r.get('access_keys', '')}")
-
-                if st.button(f"📄 Genereer & markeer als uitgegeven", key=f"agenda_print_{r['id']}"):
-                    doc = Document("Sleutel Afgifte Formulier.docx")
-                    for para in doc.paragraphs:
-                        para.text = para.text.replace("BEDRIJF", r["name"])
-                        para.text = para.text.replace("DATUM", r["date"])
-                        para.text = para.text.replace("TIJD", r["time"])
-                        para.text = para.text.replace("SLEUTELS", r.get("access_keys", ""))
-                        para.text = para.text.replace("LOCATIES", r.get("access_locations", ""))
-
-                    buffer = BytesIO()
-                    doc.save(buffer)
-                    buffer.seek(0)
-
-                    # Zet status op Uitgegeven
-                    supa.table("bookings").update({"status": f"Uitgegeven op {datetime.date.today()}"}).eq("id", r["id"]).execute()
-
-                    st.download_button(
-                        label="⬇️ Download afgifteformulier",
-                        data=buffer,
-                        file_name="Sleutel_Afgifte_Formulier.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
