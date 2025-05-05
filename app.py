@@ -457,17 +457,16 @@ elif mode == "Agenda":
                 if st.button(f"📄 Genereer & markeer als uitgegeven", key=f"agenda_print_{r['id']}"):
                     doc = Document("Sleutel Afgifte Formulier.docx")
                     for para in doc.paragraphs:
-                        para.text = para.text.replace("BEDRIJF", r["name"])
-                        para.text = para.text.replace("DATUM", r["date"])
-                        para.text = para.text.replace("TIJD", r["time"])
-                        para.text = para.text.replace("SLEUTELS", r.get("access_keys", ""))
-                        para.text = para.text.replace("LOCATIES", r.get("access_locations", ""))
+                        para.text = para.text.replace("______________________", "")
+                        para.text = para.text.replace("Firma:", f"Firma: {r['name']}")
+                        para.text = para.text.replace("Sleutelnummer:", f"Sleutelnummer: {r.get('access_keys', '')}")
+                        para.text = para.text.replace("Bestemd Voor (ruimte/locatie):", f"Bestemd Voor (ruimte/locatie): {r.get('access_locations', '')}")
+                        para.text = para.text.replace("Datum van Afgifte:", f"Datum van Afgifte: {r['date']}")
 
                     buffer = BytesIO()
                     doc.save(buffer)
                     buffer.seek(0)
 
-                    # Zet status op Uitgegeven
                     supa.table("bookings").update({"status": f"Uitgegeven op {datetime.date.today()}"}).eq("id", r["id"]).execute()
 
                     st.download_button(
@@ -476,3 +475,4 @@ elif mode == "Agenda":
                         file_name="Sleutel_Afgifte_Formulier.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
+
