@@ -21,7 +21,7 @@ params = st.query_params
 if "approve" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
     st.success("✅ De reservering is goedgekeurd.")
-    st.balloons()
+    #st.balloons()
     st.stop()
     
 elif "reject" in params and "res_id" in params:
@@ -127,22 +127,27 @@ def send_owner_email(res_id, name, date, time):
     msg["From"] = os.environ["SMTP_USER"]
     msg["To"] = os.environ["OWNER_EMAIL"]
 
-    html = f"""
-    <html><body>
-      <p>Nieuwe reservering:<br>
-         <b>Nummer:</b> {res_id}<br>
-         <b>Bedrijf:</b> {name}<br>
-         <b>Datum:</b> {date}<br>
-         <b>Tijd:</b> {time}</p>
-      <p>
-        <a href="{approve_link}" style="background-color:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">✅ Goedkeuren</a>
-        &nbsp;
-        <a href="{reject_link}" style="background-color:#f44336;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">❌ Weigeren</a>
-        &nbsp;
-        <a href="{sleutels_link}" style="background-color:#2196F3;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">🔑 Sleuteloverzicht</a>
-      </p>
-    </body></html>
-    """
+html = f"""
+<html><body>
+  <p>Nieuwe reservering:<br>
+     <b>Nummer:</b> {res_id}<br>
+     <b>Bedrijf:</b> {name}<br>
+     <b>Datum:</b> {date}<br>
+     <b>Tijd:</b> {time}</p>
+  <p>
+    <div style="margin-bottom: 8px;">
+      <a href="{approve_link}" style="background-color:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;">✅ Goedkeuren</a>
+    </div>
+    <div style="margin-bottom: 8px;">
+      <a href="{reject_link}" style="background-color:#f44336;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;">❌ Weigeren</a>
+    </div>
+    <div>
+      <a href="{sleutels_link}" style="background-color:#2196F3;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;">🔑 Sleuteloverzicht</a>
+    </div>
+  </p>
+</body></html>
+"""
+
 
     msg.attach(MIMEText(html, "html"))
 
