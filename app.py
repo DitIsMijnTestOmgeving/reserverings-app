@@ -155,6 +155,27 @@ def send_owner_email(res_id, name, date, time):
         s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
         s.send_message(msg)
 
+def send_confirmation_email(to_email, bedrijf, datum, tijd):
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "✅ Reservering goedgekeurd"
+    msg["From"] = os.environ["SMTP_USER"]
+    msg["To"] = to_email
+
+    html = f"""
+    <html><body>
+      <p>Beste {bedrijf},</p>
+      <p>Je reservering op <b>{datum}</b> om <b>{tijd}</b> is goedgekeurd.</p>
+      <p>Dank voor je aanvraag!</p>
+    </body></html>
+    """
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as s:
+        s.starttls()
+        s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
+        s.send_message(msg)
+
+
 # 6) Modus
 beheer_toegang = False
 query = st.query_params
