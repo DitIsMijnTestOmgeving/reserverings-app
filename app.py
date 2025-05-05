@@ -36,7 +36,7 @@ st.set_page_config(page_title="Reservering Beheer", page_icon="📅", layout="wi
 col_spacer, col_logo = st.columns([2, 1])
 with col_logo:
     st.image("Opmeer.png", width=400)
-    
+
 # Sidebar inklappen
 components.html("""
 <script>
@@ -51,7 +51,9 @@ document.addEventListener("click", function(event) {
 </script>
 """, height=0)
 
-
+# Sidebar knop naar uitgifte
+st.sidebar.markdown("---")
+st.sidebar.page_link("/?mode=uitgifte", label="🔑 Sleuteluitgifte", icon="🔑")
 
 # Taalinstelling
 try:
@@ -126,12 +128,10 @@ def send_owner_email(res_id, name, date, time):
     approve_link = f"https://reserveringsapp-opmeer.onrender.com/?approve=true&res_id={res_id}"
     reject_link = f"https://reserveringsapp-opmeer.onrender.com/?reject=true&res_id={res_id}"
     sleutels_link = "https://reserveringsapp-opmeer.onrender.com/?mode=sleutels"
-
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[Reservering] Nieuwe aanvraag #{res_id}"
     msg["From"] = os.environ["SMTP_USER"]
     msg["To"] = os.environ["OWNER_EMAIL"]
-
     html = f"""
     <html><body>
       <p>Nieuwe reservering:<br>
@@ -140,46 +140,17 @@ def send_owner_email(res_id, name, date, time):
          <b>Datum:</b> {date}<br>
          <b>Tijd:</b> {time}</p>
       <p>
-        <div style="margin-bottom: 8px;">
-          <a href="{approve_link}" style="background-color:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;">✅ Goedkeuren</a>
-        </div>
-        <div style="margin-bottom: 8px;">
-          <a href="{reject_link}" style="background-color:#f44336;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;">❌ Weigeren</a>
-        </div>
-        <div>
-          <a href="{sleutels_link}" style="background-color:#2196F3;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;">🔑 Sleuteloverzicht</a>
-        </div>
+        <div><a href="{approve_link}" style="background-color:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">✅ Goedkeuren</a></div>
+        <div><a href="{reject_link}" style="background-color:#f44336;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">❌ Weigeren</a></div>
+        <div><a href="{sleutels_link}" style="background-color:#2196F3;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;">🔑 Sleuteloverzicht</a></div>
       </p>
     </body></html>
     """
-
     msg.attach(MIMEText(html, "html"))
-
     with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as s:
         s.starttls()
         s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
         s.send_message(msg)
-
-def send_confirmation_email(to_email, bedrijf, datum, tijd):
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "✅ Reservering goedgekeurd"
-    msg["From"] = os.environ["SMTP_USER"]
-    msg["To"] = to_email
-
-    html = f"""
-    <html><body>
-      <p>Beste {bedrijf},</p>
-      <p>Je reservering op <b>{datum}</b> om <b>{tijd}</b> is goedgekeurd.</p>
-      <p>Dank voor je aanvraag!</p>
-    </body></html>
-    """
-    msg.attach(MIMEText(html, "html"))
-
-    with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as s:
-        s.starttls()
-        s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
-        s.send_message(msg)
-
 
 # 6) Modus
 beheer_toegang = False
@@ -438,3 +409,87 @@ elif mode == "Sleutels":
     else:
         st.info("Er zijn momenteel geen uitgegeven sleutels.")
 
+# 10) Sleuteluitgifte
+elif query.get("mode") == "uitgifte":
+    st.title("🔑 Sleutels uitgeven")
+
+    key_map = load_keys()
+    bookings = supa.table("bookings").select("*").eq("status", "Goedgekeurd").execute().data
+
+    gebruikte_sleutels = set()
+    for r in bookings:
+        ks = r.get("access_keys") or ""
+        gebruikte_sleutels.update(k.strip() for k in ks.split(",") if k.strip())
+
+    alle_sleutels = sorted(gebruikte_sleutels, key=lambda x: int(x))
+
+    html = """
+    <style>
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+        gap: 6px;
+        max-width: 100%;
+    }
+    .tegel {
+        background-color: #ffd966;
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        text-align: center;
+        line-height: 40px;
+        font-weight: bold;
+        font-size: 12px;
+    }
+    </style>
+    <div class='grid'>
+    """
+
+    for nr in alle_sleutels:
+        locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
+        html += f"<div class='tegel' title='{locatie}'>{nr}</div>"
+
+    html += "</div>"
+    st.markdown(html, unsafe_allow_html=True)
+
+    st.markdown("### 📋 Selecteer reservering om formulier te genereren")
+
+    opties = {
+        f"#{r['id']} – {r['name']} ({r['date']} {r['time']})": r
+        for r in bookings
+    }
+
+    selectie = st.selectbox("Selecteer reservering", list(opties.keys()))
+    gekozen = opties[selectie]
+
+    if st.button("📄 Genereer afgifteformulier"):
+        from docx import Document
+        from io import BytesIO
+        import tempfile
+
+        doc = Document("Sleutel Afgifte Formulier.docx")
+
+        # Vervang placeholders
+        for para in doc.paragraphs:
+            if "BEDRIJF" in para.text:
+                para.text = para.text.replace("BEDRIJF", gekozen["name"])
+            if "DATUM" in para.text:
+                para.text = para.text.replace("DATUM", gekozen["date"])
+            if "TIJD" in para.text:
+                para.text = para.text.replace("TIJD", gekozen["time"])
+            if "SLEUTELS" in para.text:
+                para.text = para.text.replace("SLEUTELS", gekozen.get("access_keys", ""))
+            if "LOCATIES" in para.text:
+                para.text = para.text.replace("LOCATIES", gekozen.get("access_locations", ""))
+
+        # Download
+        buffer = BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+
+        st.download_button(
+            label="⬇️ Download ingevuld formulier",
+            data=buffer,
+            file_name="Sleutel_Afgifte_Formulier.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
