@@ -51,8 +51,8 @@ document.addEventListener("click", function(event) {
 """, height=0)
 
 # Sidebar knop naar uitgifte
-st.sidebar.markdown("---")
-st.sidebar.page_link("/?mode=uitgifte", label="🔑 Sleuteluitgifte", icon="🔑")
+#st.sidebar.markdown("---")
+#st.sidebar.page_link("/?mode=uitgifte", label="🔑 Sleuteluitgifte", icon="🔑")
 
 # Taalinstelling
 try:
