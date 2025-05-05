@@ -12,6 +12,18 @@ from datetime import time
 import locale
 from docx import Document
 from io import BytesIO
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+
+def replace_bookmark_text(doc, bookmark_name, replacement_text):
+    for bookmark_start in doc.element.xpath(f'//w:bookmarkStart[@w:name="{bookmark_name}"]'):
+        parent = bookmark_start.getparent()
+        index = parent.index(bookmark_start)
+        run = OxmlElement("w:r")
+        text = OxmlElement("w:t")
+        text.text = replacement_text
+        run.append(text)
+        parent.insert(index + 1, run)
 
 # Supabase
 url = os.environ["SUPABASE_URL"]
@@ -456,12 +468,11 @@ elif mode == "Agenda":
 
                 if st.button(f"📄 Genereer & markeer als uitgegeven", key=f"agenda_print_{r['id']}"):
                     doc = Document("Sleutel Afgifte Formulier.docx")
-                    for para in doc.paragraphs:
-                        para.text = para.text.replace("______________________", "")
-                        para.text = para.text.replace("Firma:", f"Firma: {r['name']}")
-                        para.text = para.text.replace("Sleutelnummer:", f"Sleutelnummer: {r.get('access_keys', '')}")
-                        para.text = para.text.replace("Bestemd Voor (ruimte/locatie):", f"Bestemd Voor (ruimte/locatie): {r.get('access_locations', '')}")
-                        para.text = para.text.replace("Datum van Afgifte:", f"Datum van Afgifte: {r['date']}")
+                    
+                    replace_bookmark_text(doc, "Firma", r["name"])
+                    replace_bookmark_text(doc, "Sleutelnummer", r.get("access_keys", ""))
+                    replace_bookmark_text(doc, "Bestemd", r.get("access_locations", ""))
+                    replace_bookmark_text(doc, "AfgifteDatum", r["date"])
 
                     buffer = BytesIO()
                     doc.save(buffer)
@@ -475,4 +486,3 @@ elif mode == "Agenda":
                         file_name="Sleutel_Afgifte_Formulier.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
-
