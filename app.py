@@ -11,6 +11,32 @@ import datetime
 from datetime import time
 import locale
 
+# Extra: bevestigingsmail toevoegen
+from email.mime.text import MIMEText
+
+def send_confirmation_email(to_email, bedrijf, datum, tijd):
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Bevestiging reservering"
+    msg["From"] = os.environ["SMTP_USER"]
+    msg["To"] = to_email
+    html = f"""
+    <html><body>
+        <p>Uw reservering is goedgekeurd:</p>
+        <ul>
+            <li><b>Bedrijf:</b> {bedrijf}</li>
+            <li><b>Datum:</b> {datum}</li>
+            <li><b>Tijd:</b> {tijd}</li>
+        </ul>
+        <p>U kunt de sleutel ophalen op het afgesproken moment.</p>
+    </body></html>
+    """
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as s:
+        s.starttls()
+        s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
+        s.send_message(msg)
+        
 # Supabase
 url = os.environ["SUPABASE_URL"]
 key = os.environ["SUPABASE_KEY"]
@@ -157,10 +183,14 @@ beheer_toegang = False
 query = st.query_params
 
 # Bepaal mode op basis van URL
-if query.get("mode") == "sleutels":
+if query.get("mode") == "uitgifte":
+    mode = "Uitgifte"
+    beheer_toegang = True
+elif query.get("mode") == "sleutels":
     mode = "Sleutels"
     beheer_toegang = True
 else:
+
     st.sidebar.markdown("## Modus kiezen")
     basis_modi = ["Reserveren", "Beheer"]
     gekozen_optie = st.sidebar.radio("Modus:", basis_modi, key="modus_keuze")
@@ -410,7 +440,7 @@ elif mode == "Sleutels":
         st.info("Er zijn momenteel geen uitgegeven sleutels.")
 
 # 10) Sleuteluitgifte
-elif query.get("mode") == "uitgifte":
+elif mode == "Uitgifte":
     st.title("🔑 Sleutels uitgeven")
 
     key_map = load_keys()
