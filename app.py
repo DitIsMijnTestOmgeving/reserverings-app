@@ -304,8 +304,19 @@ elif mode == "Beheer":
             col1, col2, col3 = st.columns([1, 1, 1])
             if col1.button("✅ Goedkeuren", key=f"g{r['id']}"):
                 supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", r["id"]).execute()
-                st.query_params.clear()
-                st.rerun()
+
+                # Bevestigingsmail sturen naar testadres
+                send_confirmation_email(
+                    to_email="bendielissen@gmail.com",  # tijdelijk testadres
+                    # to_email=r["email"],  # ← uiteindelijke live-versie
+                    bedrijf=r["name"],
+                    datum=r["date"],
+                    tijd=r["time"]
+                )
+
+    st.query_params.clear()
+    st.rerun()
+
             if col2.button("❌ Afwijzen", key=f"a{r['id']}"):
                 supa.table("bookings").update({"status": "Afgewezen"}).eq("id", r["id"]).execute()
                 st.query_params.clear()
