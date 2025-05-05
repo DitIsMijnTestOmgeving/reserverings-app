@@ -30,7 +30,7 @@ elif "reject" in params and "res_id" in params:
     st.stop()
 
 # PAGINA-INSTELLINGEN
-st.set_page_config(page_title="Reservering Beheer", page_icon="🍽️", layout="wide")
+st.set_page_config(page_title="Reservering Beheer", page_icon="📅", layout="wide")
 
 # Sidebar inklappen
 components.html("""
@@ -299,31 +299,34 @@ elif mode == "Beheer":
 
     if not rows:
         st.info("Geen openstaande aanvragen.")
-    for r in rows:
-        with st.expander(f"🔔 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
-            col1, col2, col3 = st.columns([1, 1, 1])
-            if col1.button("✅ Goedkeuren", key=f"g{r['id']}"):
-                supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", r["id"]).execute()
+    else:
+        for r in rows:
+            with st.expander(f"🔔 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
+                col1, col2, col3 = st.columns([1, 1, 1])
 
-                # Bevestigingsmail sturen naar testadres
-                send_confirmation_email(
-                    to_email="bendielissen@gmail.com",  # tijdelijk testadres
-                    # to_email=r["email"],  # ← uiteindelijke live-versie
-                    bedrijf=r["name"],
-                    datum=r["date"],
-                    tijd=r["time"]
-                )
+                if col1.button("✅ Goedkeuren", key=f"g{r['id']}"):
+                    supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", r["id"]).execute()
 
-    st.query_params.clear()
-    st.rerun()
+                    # Bevestigingsmail sturen naar testadres
+                    send_confirmation_email(
+                        to_email="bendielissen@gmail.com",  # tijdelijk testadres
+                        # to_email=r["email"],  # ← uiteindelijke live-versie
+                        bedrijf=r["name"],
+                        datum=r["date"],
+                        tijd=r["time"]
+                    )
 
-            if col2.button("❌ Afwijzen", key=f"a{r['id']}"):
-                supa.table("bookings").update({"status": "Afgewezen"}).eq("id", r["id"]).execute()
-                st.query_params.clear()
-                st.rerun()
-            if col3.button("🗑️ Verwijder", key=f"d{r['id']}"):
-                supa.table("bookings").delete().eq("id", r["id"]).execute()
-                st.rerun()
+                    st.query_params.clear()
+                    st.rerun()
+
+                if col2.button("❌ Afwijzen", key=f"a{r['id']}"):
+                    supa.table("bookings").update({"status": "Afgewezen"}).eq("id", r["id"]).execute()
+                    st.query_params.clear()
+                    st.rerun()
+
+                if col3.button("🗑️ Verwijder", key=f"d{r['id']}"):
+                    supa.table("bookings").delete().eq("id", r["id"]).execute()
+                    st.rerun()
 
     all_rows = supa.table("bookings").select("*").order("date").execute().data
     st.subheader("Alle reserveringen")
