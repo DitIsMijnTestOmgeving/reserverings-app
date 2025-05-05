@@ -156,61 +156,9 @@ def send_owner_email(res_id, name, date, time):
         s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
         s.send_message(msg)
 
-# 6) Modus
-beheer_toegang = False
-query = st.query_params
-
-# Bepaal mode op basis van URL
-if query.get("mode") == "uitgifte":
-    mode = "Uitgifte"
-    beheer_toegang = True
-elif query.get("mode") == "sleutels":
-    mode = "Sleutels"
-    beheer_toegang = True
-else:
-
-    st.sidebar.markdown("## Modus kiezen")
-    basis_modi = ["Reserveren", "Beheer"]
-    gekozen_optie = st.sidebar.radio("Modus:", basis_modi, key="modus_keuze")
-
-    if gekozen_optie == "Beheer":
-        wachtwoord = st.sidebar.text_input("Beheerderswachtwoord", type="password")
-        if wachtwoord == "00":
-            beheer_toegang = True
-            mode = "Beheer"
-        else:
-            st.sidebar.warning("Geen toegang tot Sleutels. Voer correct wachtwoord in.")
-            st.stop()
-    else:
-        mode = "Reserveren"
-
-
-    # Zet automatisch de cursor in het wachtwoordveld
-    components.html(
-        """
-        <script>
-            const interval = setInterval(() => {
-                const el = window.parent.document.querySelector('input[type="password"]');
-                if (el) {
-                    el.focus();
-                    clearInterval(interval);
-                }
-            }, 100);
-        </script>
-        """,
-        height=0,
-    )
-
-# Bepaal submodus als beheerder
-if beheer_toegang:
-    beheer_submodus = st.sidebar.radio(
-        "Beheeronderdeel:",
-        ["Beheer", "Sleutels", "Agenda"],
-        index=0,
-        key="beheer_submodus"  # <- unieke key toegevoegd
-    )
-    mode = beheer_submodus
-
+# 6) Modus — géén inlog meer, alles openbaar
+st.sidebar.markdown("## Modus kiezen")
+mode = st.sidebar.radio("Kies weergave:", ["Reserveren", "Beheer", "Agenda"])
 
 # 7) Reserveren
 if mode == "Reserveren":
