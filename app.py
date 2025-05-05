@@ -10,33 +10,9 @@ import pandas as pd
 import datetime
 from datetime import time
 import locale
+from docx import Document
+from io import BytesIO
 
-# Extra: bevestigingsmail toevoegen
-from email.mime.text import MIMEText
-
-def send_confirmation_email(to_email, bedrijf, datum, tijd):
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Bevestiging reservering"
-    msg["From"] = os.environ["SMTP_USER"]
-    msg["To"] = to_email
-    html = f"""
-    <html><body>
-        <p>Uw reservering is goedgekeurd:</p>
-        <ul>
-            <li><b>Bedrijf:</b> {bedrijf}</li>
-            <li><b>Datum:</b> {datum}</li>
-            <li><b>Tijd:</b> {tijd}</li>
-        </ul>
-        <p>U kunt de sleutel ophalen op het afgesproken moment.</p>
-    </body></html>
-    """
-    msg.attach(MIMEText(html, "html"))
-
-    with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as s:
-        s.starttls()
-        s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
-        s.send_message(msg)
-        
 # Supabase
 url = os.environ["SUPABASE_URL"]
 key = os.environ["SUPABASE_KEY"]
@@ -47,9 +23,7 @@ params = st.query_params
 if "approve" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
     st.success("✅ De reservering is goedgekeurd.")
-    #st.balloons()
     st.stop()
-    
 elif "reject" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
     st.error("❌ De reservering is afgewezen.")
@@ -69,7 +43,6 @@ components.html("""
 document.addEventListener("click", function(event) {
     const sidebar = window.parent.document.querySelector('aside[data-testid="stSidebar"]');
     const toggleButton = window.parent.document.querySelector('button[title="Collapse sidebar"]');
-
     if (sidebar && toggleButton && !sidebar.contains(event.target)) {
         toggleButton.click();
     }
@@ -89,6 +62,11 @@ except:
         locale.setlocale(locale.LC_TIME, 'nld')
     except:
         pass
+
+# Dummy functie voor bevestigingsmail
+
+def send_confirmation_email(to_email, bedrijf, datum, tijd):
+    print(f"Mail naar {to_email}: reservering bevestigd voor {bedrijf} op {datum} om {tijd}.")
 
 # 2) Bedrijven
 def load_companies():
@@ -523,3 +501,42 @@ elif mode == "Uitgifte":
             file_name="Sleutel_Afgifte_Formulier.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
+
+        # Toegevoegde Agenda-functionaliteit
+if mode == "Agenda":
+    st.title("🗓️ Sleuteluitgifte bevestigen")
+    goedgekeurd = supa.table("bookings").select("*").eq("status", "Goedgekeurd").execute().data
+
+    if not goedgekeurd:
+        st.info("Er zijn geen goedgekeurde reserveringen.")
+    else:
+        for r in goedgekeurd:
+            with st.expander(f"📄 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
+                st.markdown(f"**Bedrijf:** {r['name']}")
+                st.markdown(f"**Datum:** {r['date']}")
+                st.markdown(f"**Tijd:** {r['time']}")
+                st.markdown(f"**Locaties:** {r.get('access_locations', '')}")
+                st.markdown(f"**Sleutels:** {r.get('access_keys', '')}")
+
+                if st.button(f"📄 Genereer & markeer als uitgegeven", key=f"agenda_print_{r['id']}"):
+                    doc = Document("Sleutel Afgifte Formulier.docx")
+                    for para in doc.paragraphs:
+                        para.text = para.text.replace("BEDRIJF", r["name"])
+                        para.text = para.text.replace("DATUM", r["date"])
+                        para.text = para.text.replace("TIJD", r["time"])
+                        para.text = para.text.replace("SLEUTELS", r.get("access_keys", ""))
+                        para.text = para.text.replace("LOCATIES", r.get("access_locations", ""))
+
+                    buffer = BytesIO()
+                    doc.save(buffer)
+                    buffer.seek(0)
+
+                    # Zet status op Uitgegeven
+                    supa.table("bookings").update({"status": f"Uitgegeven op {datetime.date.today()}"}).eq("id", r["id"]).execute()
+
+                    st.download_button(
+                        label="⬇️ Download afgifteformulier",
+                        data=buffer,
+                        file_name="Sleutel_Afgifte_Formulier.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
