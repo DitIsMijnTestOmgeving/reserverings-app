@@ -32,6 +32,11 @@ elif "reject" in params and "res_id" in params:
 # PAGINA-INSTELLINGEN
 st.set_page_config(page_title="Reservering Beheer", page_icon="📅", layout="wide")
 
+# Logo toevoegen
+col_spacer, col_logo = st.columns([2, 1])
+with col_logo:
+    st.image("Opmeer.png", width=400)
+    
 # Sidebar inklappen
 components.html("""
 <script>
