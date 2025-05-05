@@ -127,27 +127,26 @@ def send_owner_email(res_id, name, date, time):
     msg["From"] = os.environ["SMTP_USER"]
     msg["To"] = os.environ["OWNER_EMAIL"]
 
-html = f"""
-<html><body>
-  <p>Nieuwe reservering:<br>
-     <b>Nummer:</b> {res_id}<br>
-     <b>Bedrijf:</b> {name}<br>
-     <b>Datum:</b> {date}<br>
-     <b>Tijd:</b> {time}</p>
-  <p>
-    <div style="margin-bottom: 8px;">
-      <a href="{approve_link}" style="background-color:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;">✅ Goedkeuren</a>
-    </div>
-    <div style="margin-bottom: 8px;">
-      <a href="{reject_link}" style="background-color:#f44336;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;">❌ Weigeren</a>
-    </div>
-    <div>
-      <a href="{sleutels_link}" style="background-color:#2196F3;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;">🔑 Sleuteloverzicht</a>
-    </div>
-  </p>
-</body></html>
-"""
-
+    html = f"""
+    <html><body>
+      <p>Nieuwe reservering:<br>
+         <b>Nummer:</b> {res_id}<br>
+         <b>Bedrijf:</b> {name}<br>
+         <b>Datum:</b> {date}<br>
+         <b>Tijd:</b> {time}</p>
+      <p>
+        <div style="margin-bottom: 8px;">
+          <a href="{approve_link}" style="background-color:#4CAF50;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;">✅ Goedkeuren</a>
+        </div>
+        <div style="margin-bottom: 8px;">
+          <a href="{reject_link}" style="background-color:#f44336;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;">❌ Weigeren</a>
+        </div>
+        <div>
+          <a href="{sleutels_link}" style="background-color:#2196F3;color:white;padding:10px 20px;text-decoration:none;border-radius:4px;display:inline-block;">🔑 Sleuteloverzicht</a>
+        </div>
+      </p>
+    </body></html>
+    """
 
     msg.attach(MIMEText(html, "html"))
 
@@ -155,9 +154,6 @@ html = f"""
         s.starttls()
         s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
         s.send_message(msg)
-
-
-
 
 # 6) Modus
 beheer_toegang = False
