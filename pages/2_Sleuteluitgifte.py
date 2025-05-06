@@ -1,50 +1,93 @@
 import streamlit as st
-import os
-from supabase import create_client
+from utils import get_supabase_client, load_keys, replace_bookmark_text
 from docx import Document
 from io import BytesIO
 import datetime
 
-# Supabase
-url = os.environ["SUPABASE_URL"]
-key = os.environ["SUPABASE_KEY"]
-supa = create_client(url, key)
-
-# Sleutels
-def load_keys():
-    return {
-        "Gemeentehuis": "26,27,28,29,30",
-        "Gymzaal De Weere": "36, 37",
-        "Brandweer Spanbroek": "14",
-        # voeg hier alles toe
-    }
-
-def replace_bookmark_text(doc, bookmark_name, replacement_text):
-    for bookmark_start in doc.element.xpath(f'//w:bookmarkStart[@w:name="{bookmark_name}"]'):
-        parent = bookmark_start.getparent()
-        index = parent.index(bookmark_start)
-        if index + 1 < len(parent):
-            parent.remove(parent[index + 1])
-        from docx.oxml import OxmlElement
-        run = OxmlElement("w:r")
-        text = OxmlElement("w:t")
-        text.text = replacement_text
-        run.append(text)
-        parent.insert(index + 1, run)
+supa = get_supabase_client()
 
 st.set_page_config(page_title="Sleuteluitgifte", page_icon="🔑", layout="wide")
 st.title("🔑 Sleuteluitgifte")
 
-bookings = supa.table("bookings").select("*").execute().data
 key_map = load_keys()
+bookings = supa.table("bookings").select("*").execute().data
+
+# ➤ Statuskleur per sleutelnummer
+kleur_per_sleutel = {}
+for r in bookings:
+    status = r.get("status", "")
+    sleutels = r.get("access_keys", "")
+    if not sleutels:
+        continue
+    for s in sleutels.split(","):
+        s = s.strip()
+        if not s:
+            continue
+        if status == "Wachten":
+            kleur_per_sleutel[s] = "#ffff99"
+        elif status == "Goedgekeurd":
+            kleur_per_sleutel[s] = "#ffb347"
+        elif str(status).startswith("Uitgegeven op"):
+            kleur_per_sleutel[s] = "#ff6961"
+        elif str(status).startswith("Ingeleverd op"):
+            kleur_per_sleutel[s] = "#90ee90"
+
+# ➤ Tegeloverzicht
+alle_sleutels = sorted(set(k.strip() for v in key_map.values() for k in v.split(",")), key=lambda x: int(x))
+html = """
+<style>
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+    gap: 6px;
+    max-width: 100%;
+}
+.tegel {
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    text-align: center;
+    line-height: 40px;
+    font-weight: bold;
+    font-size: 12px;
+}
+</style>
+<div class='grid'>
+"""
+for nr in alle_sleutels:
+    kleur = kleur_per_sleutel.get(nr, "#90ee90")
+    locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
+    html += f"<div class='tegel' title='{locatie}' style='background-color: {kleur};'>{nr}</div>"
+html += "</div>"
+st.markdown(html, unsafe_allow_html=True)
+
+# ➤ Legenda
+st.markdown("""
+<div style='margin-top: 10px; font-size: 14px;'>
+🟨 <b>Wachten</b><br>
+🟧 <b>Goedgekeurd</b><br>
+🟥 <b>Uitgegeven</b><br>
+🟩 <b>Ingeleverd</b>
+</div>
+""", unsafe_allow_html=True)
+
+# ➤ Uitgifte goedgekeurde reserveringen
+st.markdown("### 📄 Sleutels uitgeven")
+
+if "uitgifte_buffer" not in st.session_state:
+    st.session_state["uitgifte_buffer"] = None
+    st.session_state["uitgifte_id"] = None
 
 goedgekeurd = [r for r in bookings if r["status"] == "Goedgekeurd"]
-uitgegeven = [r for r in bookings if str(r["status"]).startswith("Uitgegeven")]
-
-st.subheader("📄 Uitgifteformulier")
 for r in goedgekeurd:
-    with st.expander(f"#{r['id']} – {r['name']} ({r['date']} {r['time']})"):
-        if st.button("📝 Genereer formulier", key=f"gen_{r['id']}"):
+    with st.expander(f"📋 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
+        st.write(f"**Bedrijf**: {r['name']}")
+        st.write(f"**Datum**: {r['date']}")
+        st.write(f"**Tijd**: {r['time']}")
+        st.write(f"**Locaties**: {r.get('access_locations', '')}")
+        st.write(f"**Sleutels**: {r.get('access_keys', '')}")
+
+        if st.button("🔑 Sleutel uitgifteformulier genereren", key=f"gen_{r['id']}"):
             doc = Document("Sleutel Afgifte Formulier.docx")
             replace_bookmark_text(doc, "Firma", r["name"])
             replace_bookmark_text(doc, "Sleutelnummer", r.get("access_keys", ""))
@@ -55,23 +98,44 @@ for r in goedgekeurd:
             doc.save(buffer)
             buffer.seek(0)
 
-            supa.table("bookings").update({"status": f"Uitgegeven op {datetime.date.today()}"}) \
-                .eq("id", r["id"]).execute()
+            st.session_state["uitgifte_buffer"] = buffer
+            st.session_state["uitgifte_id"] = r["id"]
 
+        if st.session_state.get("uitgifte_id") == r["id"] and st.session_state["uitgifte_buffer"]:
             st.download_button(
-                label="⬇️ Download formulier",
-                data=buffer,
+                label="⬇️ Download formulier en markeer als uitgegeven",
+                data=st.session_state["uitgifte_buffer"],
                 file_name="Sleutel_Afgifte_Formulier.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
-            st.rerun()
+            if st.button("✅ Bevestig uitgifte", key=f"bevestig_{r['id']}"):
+                vandaag = datetime.date.today().isoformat()
+                supa.table("bookings").update({
+                    "status": f"Uitgegeven op {vandaag}"
+                }).eq("id", r["id"]).execute()
+                st.success("Sleutel gemarkeerd als uitgegeven.")
+                st.session_state["uitgifte_buffer"] = None
+                st.session_state["uitgifte_id"] = None
+                st.rerun()
 
-st.subheader("🔁 Retourmelding")
-for r in uitgegeven:
-    with st.expander(f"#{r['id']} – {r['name']} ({r['date']} {r['time']})"):
-        if st.button("✅ Markeer als ingeleverd", key=f"inlever_{r['id']}"):
-            supa.table("bookings").update({
-                "status": f"Ingeleverd op {datetime.date.today()}"
-            }).eq("id", r["id"]).execute()
-            st.success("Gemarkeerd als ingeleverd.")
-            st.rerun()
+# ➤ Retourmelden
+st.markdown("### 🔁 Sleutels retourmelden")
+uitgegeven = [r for r in bookings if str(r["status"]).startswith("Uitgegeven op")]
+if uitgegeven:
+    for r in uitgegeven:
+        with st.expander(f"🔁 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
+            st.markdown(f"**Bedrijf:** {r['name']}")
+            st.markdown(f"**Datum:** {r['date']}")
+            st.markdown(f"**Tijd:** {r['time']}")
+            st.markdown(f"**Locaties:** {r.get('access_locations', '')}")
+            st.markdown(f"**Sleutels:** {r.get('access_keys', '')}")
+
+            if st.button("🔁 Markeer als ingeleverd", key=f"inleverd_{r['id']}"):
+                vandaag = datetime.date.today().isoformat()
+                supa.table("bookings").update({
+                    "status": f"Ingeleverd op {vandaag}"
+                }).eq("id", r["id"]).execute()
+                st.success("Sleutels gemarkeerd als ingeleverd.")
+                st.rerun()
+else:
+    st.info("Geen sleutels om retour te melden.")
