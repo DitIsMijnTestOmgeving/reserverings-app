@@ -383,18 +383,26 @@ elif mode == "Sleutels":
     """
 
     for nr in alle_sleutels:
-        kleur = "#90ee90"  # standaard: groen
+        kleur = "#90ee90"  # standaard groen
+
         for r in bookings:
             if not r.get("access_keys"):
                 continue
+
             sleutel_lijst = [k.strip() for k in r["access_keys"].split(",") if k.strip()]
             if nr in sleutel_lijst:
                 status = r.get("status", "")
-                if status in ("Goedgekeurd", "Wachten"):
-                    kleur = "#ff6961"  # rood
+                if status == "Wachten":
+                    kleur = "#ff6961"  # rood (gereserveerd, nog geen goedkeuring)
+                    break
+                elif status == "Goedgekeurd":
+                    kleur = "#ff6961"  # ook rood (wel goedgekeurd, maar nog niet uitgegeven)
                     break
                 elif str(status).startswith("Uitgegeven op"):
                     kleur = "#bfbfbf"  # grijs
+                    break
+                elif str(status).startswith("Ingeleverd op"):
+                    kleur = "#90ee90"  # groen
                     break
 
         locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
@@ -468,7 +476,13 @@ elif mode == "Uitgifte":
 
     html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
-
+    st.markdown("""
+    <div style='margin-top: 10px; font-size: 14px;'>
+    🟥 <b>Gereserveerd</b> (wacht op goedkeuring)<br>
+    ⬜ <b>Uitgegeven</b> (nog niet retour)<br>
+    ✅ <b>Ingeleverd</b> (beschikbaar)
+    </div>
+""", unsafe_allow_html=True)
     st.markdown("### 📋 Selecteer reservering om formulier te genereren")
 
     opties = {
