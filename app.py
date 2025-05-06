@@ -153,7 +153,7 @@ def load_keys():
 def send_owner_email(res_id, name, date, time):
     approve_link = f"https://reserveringsapp-opmeer.onrender.com/?approve=true&res_id={res_id}"
     reject_link = f"https://reserveringsapp-opmeer.onrender.com/?reject=true&res_id={res_id}"
-    sleutels_link = "https://reserveringsapp-opmeer.onrender.com/?mode=sleutels"
+    sleutels_link = "https://reserveringsapp-opmeer.onrender.com/?mode=Sleuteluitgifte"
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[Reservering] Nieuwe aanvraag #{res_id}"
     msg["From"] = os.environ["SMTP_USER"]
@@ -214,11 +214,17 @@ if mode == "Reserveren":
     st.title("Reservering maken")
 
     st.markdown("""
-        <style>
-            .block-container {
-                padding-top: 1rem !important;
-            }
-        </style>
+    <div style='margin-top: 10px; font-size: 14px;'>
+        🟨 <b>Gereserveerd</b> (wacht op goedkeuring)<br>
+        🟧 <b>Goedgekeurd</b> (wacht op uitgifte)<br>
+        🟥 <b>Uitgegeven</b> (nog niet retour)<br>
+        🟩 <b>Ingeleverd</b> (beschikbaar)
+    </div>
+    <style>
+        .block-container {
+            padding-top: 1rem !important;
+        }
+    </style>
     """, unsafe_allow_html=True)
 
     import locale
@@ -343,7 +349,7 @@ elif mode == "Beheer":
         st.info("Er zijn geen reserveringen om te verwijderen.")
 
 # 9) Sleutels
-elif mode == "Sleutels":
+elif mode == "Sleuteluitgifte":
     st.title("🔑 Sleuteloverzicht")
 
     key_map = load_keys()
@@ -556,7 +562,25 @@ elif mode == "Sleuteluitgifte":
     <div class='grid'>
     """
     for nr in alle_sleutels:
-        kleur = "#ff6961" if nr in gebruikte_sleutels else "#90ee90"
+        kleur = "#90ee90"  # standaard groen
+        for r in bookings:
+            if not r.get("access_keys"):
+                continue
+            sleutel_lijst = [k.strip() for k in r["access_keys"].split(",") if k.strip()]
+            if nr in sleutel_lijst:
+                status = r.get("status", "")
+                if status == "Wachten":
+                    kleur = "#ffff99"  # geel
+                    break
+                elif status == "Goedgekeurd":
+                    kleur = "#ffb347"  # oranje
+                    break
+                elif str(status).startswith("Uitgegeven op"):
+                    kleur = "#ff6961"  # rood
+                    break
+                elif str(status).startswith("Ingeleverd op"):
+                    kleur = "#90ee90"  # groen
+                    break
         locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
         html += f"<div class='tegel' title='{locatie}' style='background-color: {kleur};'>{nr}</div>"
 
