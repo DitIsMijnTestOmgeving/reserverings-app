@@ -231,7 +231,6 @@ if mode == "Reserveren":
         send_owner_email(res_id, naam, data["date"], tijd_str)
         st.success("✅ Aanvraag succesvol verzonden!")
 
-
 # 8) Beheer
 elif mode == "Beheer":
     st.title("Beheer aanvragen")
@@ -486,3 +485,5 @@ elif mode == "Agenda":
                         file_name="Sleutel_Afgifte_Formulier.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
+
+
