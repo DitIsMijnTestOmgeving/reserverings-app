@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import time
 import datetime
+import urllib
 
 from utils import (
     get_supabase_client,
@@ -9,12 +10,34 @@ from utils import (
     send_owner_email
 )
 
-st.set_page_config(page_title="Sleutelreservering", page_icon="📅", layout="wide", initial_sidebar_state="collapsed")
+# ➤ Pagina instellingen
+st.set_page_config(
+    page_title="Sleutelreservering",
+    page_icon="📅",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
+# ➤ Verberg "Beheer" en "Sleuteluitgifte" links op hoofdpagina
+path = urllib.parse.urlparse(st.experimental_get_url()).path
+if path in ["/", "/index", "/index.html"]:
+    st.markdown("""
+    <style>
+    section[data-testid="stSidebar"] a[href*="Beheer"],
+    section[data-testid="stSidebar"] a[href*="Sleuteluitgifte"] {
+        color: transparent !important;
+        pointer-events: none;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# ➤ Supabase client
 supa = get_supabase_client()
 
+# ➤ Hoofdtitel
 st.title("Sleutelreservering aanvragen")
 
+# ➤ Formulier
 bedrijven = load_companies()
 bedrijf = st.selectbox("Bedrijf", sorted(bedrijven.keys()))
 email = bedrijven[bedrijf]
@@ -29,6 +52,7 @@ locaties = []
 if toegang:
     locaties = st.multiselect("Selecteer locatie(s)", sorted(load_keys().keys()))
 
+# ➤ Aanvraag versturen
 if st.button("Verstuur aanvraag"):
     key_map = load_keys()
     data = {
