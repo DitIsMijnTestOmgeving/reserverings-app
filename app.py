@@ -179,46 +179,37 @@ def send_owner_email(res_id, name, date, time):
         s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
         s.send_message(msg)
 
-# 6) Modus – standaard alleen "Reserveren", 🔐 toont extra opties
+# 6) Modus kiezen (inclusief ondersteuning voor ?mode=Beheer of ?mode=Sleuteluitgifte)
 st.sidebar.markdown("## Modus kiezen")
 
 # Zorg dat de status onthouden wordt
 if "show_all_modes" not in st.session_state:
     st.session_state["show_all_modes"] = False
+if "gekozen_mode" not in st.session_state:
+    st.session_state["gekozen_mode"] = "Reserveren"
 
 # 🔐 knop om beheer en uitgifte te ontgrendelen
 if st.sidebar.button("🔐", help="Geavanceerde weergave tonen"):
     st.session_state["show_all_modes"] = True
 
-# Sidebar automatisch inklappen bij openen
-components.html("""
-<script>
-window.addEventListener("load", function() {
-    const sidebar = window.parent.document.querySelector('aside[data-testid="stSidebar"]');
-    const toggleButton = window.parent.document.querySelector('button[title="Collapse sidebar"]');
-    if (sidebar && toggleButton && sidebar.offsetWidth > 250) {
-        toggleButton.click();
-    }
-});
-</script>
-""", height=0)
+# ✅ Query-string uitlezen bij laden van pagina
+query_params = st.experimental_get_query_params()
+query_mode = query_params.get("mode", [None])[0]
 
-# Toon afhankelijk van status
-# Query-parameter uitlezen (bijvoorbeeld ?mode=Beheer)
-query_mode = st.query_params.get("mode", [None])[0]
-
-if query_mode in ["Beheer", "Sleuteluitgifte"]:
+# Als er een geldige modus in de query zit, instellen en rerun
+if query_mode in ["Beheer", "Sleuteluitgifte"] and st.session_state["gekozen_mode"] != query_mode:
     st.session_state["show_all_modes"] = True
     st.session_state["gekozen_mode"] = query_mode
-    mode = query_mode
-elif st.session_state["show_all_modes"]:
+    st.experimental_rerun()
+
+# 🔄 Kies modus via de zijbalk (of standaard)
+if st.session_state["show_all_modes"]:
     mode = st.sidebar.radio("Kies weergave:", ["Reserveren", "Beheer", "Sleuteluitgifte"],
-                            index=["Reserveren", "Beheer", "Sleuteluitgifte"].index(
-                                st.session_state.get("gekozen_mode", "Reserveren")))
+                            index=["Reserveren", "Beheer", "Sleuteluitgifte"].index(st.session_state["gekozen_mode"]))
     st.session_state["gekozen_mode"] = mode
 else:
     mode = "Reserveren"
-
+    st.session_state["gekozen_mode"] = mode
 
 # 7) Reserveren
 if mode == "Reserveren":
