@@ -11,14 +11,18 @@ st.title("🛠️ Beheer reserveringen")
 
 # ▼ Verwerk ?approve / ?reject uit e-mail
 params = st.query_params
+params = st.experimental_get_query_params()
+
 if "approve" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
     st.success(f"✅ Reservering #{params['res_id'][0]} is goedgekeurd.")
-    st.query_params.clear()
+    st.experimental_set_query_params()  # reset de URL
+
 elif "reject" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
     st.error(f"❌ Reservering #{params['res_id'][0]} is afgewezen.")
-    st.query_params.clear()
+    st.experimental_set_query_params()  # reset de URL
+
 
 # ▼ Openstaande aanvragen
 st.markdown("_Hieronder kun je openstaande aanvragen goedkeuren, afwijzen of verwijderen._")
