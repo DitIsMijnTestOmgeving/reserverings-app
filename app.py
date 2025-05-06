@@ -451,19 +451,24 @@ elif mode == "Sleuteluitgifte":
     st.markdown("### 🔁 Sleutels retourmelden")
     uitgegeven = [r for r in bookings if str(r["status"]).startswith("Uitgegeven op")]
     if uitgegeven:
-        labels = [f"#{r['id']} – {r['name']} ({r['date']} {r['time']})" for r in uitgegeven]
-        keuze = st.selectbox("Selecteer reservering voor retour", labels)
-        geselecteerd = next(r for r in uitgegeven if f"#{r['id']}" in keuze)
+        for r in uitgegeven:
+            with st.expander(f"🔁 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
+                st.markdown(f"**Bedrijf:** {r['name']}")
+                st.markdown(f"**Datum:** {r['date']}")
+                st.markdown(f"**Tijd:** {r['time']}")
+                st.markdown(f"**Locaties:** {r.get('access_locations', '')}")
+                st.markdown(f"**Sleutels:** {r.get('access_keys', '')}")
 
-        if st.button("🔁 Markeer als ingeleverd"):
-            vandaag = datetime.date.today().isoformat()
-            supa.table("bookings").update({
-                "status": f"Ingeleverd op {vandaag}"
-            }).eq("id", geselecteerd["id"]).execute()
-            st.success("Sleutels gemarkeerd als ingeleverd.")
-            st.rerun()
+                if st.button("🔁 Markeer als ingeleverd", key=f"inleverd_{r['id']}"):
+                    vandaag = datetime.date.today().isoformat()
+                    supa.table("bookings").update({
+                        "status": f"Ingeleverd op {vandaag}"
+                    }).eq("id", r["id"]).execute()
+                    st.success("Sleutels gemarkeerd als ingeleverd.")
+                    st.rerun()
     else:
         st.info("Geen sleutels om retour te melden.")
+
 
 # 10) Sleuteluitgifte
 
