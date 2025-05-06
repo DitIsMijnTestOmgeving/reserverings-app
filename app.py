@@ -4,6 +4,9 @@ from datetime import time
 from supabase import create_client
 import datetime
 
+st.set_page_config(page_title="Sleutelreservering", page_icon="📅", layout="wide", initial_sidebar_state="collapsed")
+
+
 # Supabase instellen
 url = os.environ["SUPABASE_URL"]
 key = os.environ["SUPABASE_KEY"]
