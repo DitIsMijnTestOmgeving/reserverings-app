@@ -21,7 +21,7 @@ st.set_page_config(
 # Verander de titel in de sidebar van 'app' naar 'Reserveren'
 st.markdown("""
 <style>
-/* 📅 Reserveren: vervang 'app' door een icoon */
+/* 📅 Reserveren: toon alleen icoon */
 section[data-testid="stSidebar"] a[href="/"] > span {
     visibility: hidden;
     position: relative;
@@ -33,7 +33,7 @@ section[data-testid="stSidebar"] a[href="/"]::after {
     font-size: 18px;
 }
 
-/* 🛠 Beheer: verberg op de hoofdpagina, toon alleen icoon op /Beheer */
+/* 🛠 Beheer: verberg en blokkeer op '/' */
 section[data-testid="stSidebar"] a[href$="/Beheer"] > span {
     visibility: hidden;
     position: relative;
@@ -44,13 +44,13 @@ section[data-testid="stSidebar"] a[href$="/Beheer"]::after {
     left: 1.3rem;
     font-size: 18px;
 }
-body:not(:has([data-testid="stAppViewContainer"] a[href$='/Beheer'].css-1v0mbdj)) 
-section[data-testid="stSidebar"] a[href$="/Beheer"] {
+body:has(main[data-testid="stAppViewContainer"] a[href='/']) 
+  section[data-testid="stSidebar"] a[href$="/Beheer"] {
     color: transparent !important;
     pointer-events: none;
 }
 
-/* 🔑 Sleutels: idem */
+/* 🔑 Sleutels: verberg en blokkeer op '/' */
 section[data-testid="stSidebar"] a[href$="/Uitgifte"] > span {
     visibility: hidden;
     position: relative;
@@ -61,13 +61,14 @@ section[data-testid="stSidebar"] a[href$="/Uitgifte"]::after {
     left: 1.3rem;
     font-size: 18px;
 }
-body:not(:has([data-testid="stAppViewContainer"] a[href$='/Uitgifte'].css-1v0mbdj)) 
-section[data-testid="stSidebar"] a[href$="/Uitgifte"] {
+body:has(main[data-testid="stAppViewContainer"] a[href='/']) 
+  section[data-testid="stSidebar"] a[href$="/Uitgifte"] {
     color: transparent !important;
     pointer-events: none;
 }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 # ➤ Supabase
