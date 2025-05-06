@@ -14,31 +14,31 @@ from io import BytesIO
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+# Functie voor bookmark-vervanging
+
 def replace_bookmark_text(doc, bookmark_name, replacement_text):
     for bookmark_start in doc.element.xpath(f'//w:bookmarkStart[@w:name="{bookmark_name}"]'):
         parent = bookmark_start.getparent()
         index = parent.index(bookmark_start)
 
-        # Verwijder run direct na bookmark als die underscores bevat
         if index + 1 < len(parent):
             next_elem = parent[index + 1]
             texts = next_elem.xpath(".//w:t")
             if texts and texts[0].text and "_" in texts[0].text:
                 parent.remove(next_elem)
 
-        # Voeg de nieuwe tekst toe
         run = OxmlElement("w:r")
         text = OxmlElement("w:t")
         text.text = replacement_text
         run.append(text)
         parent.insert(index + 1, run)
 
-# Supabase
+# Supabase instellen
 url = os.environ["SUPABASE_URL"]
 key = os.environ["SUPABASE_KEY"]
 supa = create_client(url, key)
 
-# directe goedkeur/afwijs via URL-query
+# Query-parameters uitlezen
 params = st.query_params
 if "approve" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
@@ -46,13 +46,12 @@ if "approve" in params and "res_id" in params:
     st.session_state["show_all_modes"] = True
     st.session_state["gekozen_mode"] = "Beheer"
     st.rerun()
-
 elif "reject" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
     st.error("❌ De reservering is afgewezen.")
     st.stop()
 
-# PAGINA-INSTELLINGEN
+# Pagina instellingen
 st.set_page_config(page_title="Reservering Beheer", page_icon="📅", layout="wide")
 
 # Logo toevoegen
@@ -60,7 +59,7 @@ col_spacer, col_logo = st.columns([2, 1])
 with col_logo:
     st.image("Opmeer.png", width=400)
 
-# Sidebar inklappen
+# Sidebar automatisch inklappen
 components.html("""
 <script>
 window.addEventListener("load", function() {
@@ -73,11 +72,7 @@ window.addEventListener("load", function() {
 </script>
 """, height=0)
 
-# Sidebar knop naar uitgifte
-#st.sidebar.markdown("---")
-#st.sidebar.page_link("/?mode=uitgifte", label="🔑 Sleuteluitgifte", icon="🔑")
-
-# Taalinstelling
+# Locale instellen
 try:
     locale.setlocale(locale.LC_TIME, 'nl_NL.UTF-8')
 except:
@@ -86,12 +81,13 @@ except:
     except:
         pass
 
-# Dummy functie voor bevestigingsmail
+# Dummy mailfunctie
 
 def send_confirmation_email(to_email, bedrijf, datum, tijd):
     print(f"Mail naar {to_email}: reservering bevestigd voor {bedrijf} op {datum} om {tijd}.")
 
-# 2) Bedrijven
+# Bedrijven laden
+
 def load_companies():
     return {
         "Aesy Liften B.V.": "info@aesyliften.nl",
@@ -114,7 +110,8 @@ def load_companies():
         "Vastenburg": "info@vastenburg.nl"
     }
 
-# 3) Sleutellijst
+# Sleutels laden
+
 def load_keys():
     return {
         "Bibliotheek Opmeer": "1, 2, 3",
@@ -150,7 +147,8 @@ def load_keys():
         "Zwembad De Weijver": "38, 39"
     }
 
-# 4) Mail
+# Mailfunctie voor beheerder
+
 def send_owner_email(res_id, name, date, time):
     approve_link = f"https://reserveringsapp-opmeer.onrender.com/?approve=true&res_id={res_id}"
     reject_link = f"https://reserveringsapp-opmeer.onrender.com/?reject=true&res_id={res_id}"
@@ -179,6 +177,11 @@ def send_owner_email(res_id, name, date, time):
         s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
         s.send_message(msg)
 
+# 👉 Vanaf hier kun je doorgaan met de "modus kiezen" en verdere UI logica
+# Let op dat je niet opnieuw een tweede elif mode == "Sleuteluitgifte" toevoegt!
+# Voeg de rest van de app toe in hetzelfde strakke patroon zonder herhaling of dubbele logica.
+
+
 # 6) Modus kiezen (inclusief ondersteuning voor ?mode=Beheer of ?mode=Sleuteluitgifte)
 st.sidebar.markdown("## Modus kiezen")
 
@@ -193,7 +196,7 @@ if st.sidebar.button("🔐", help="Geavanceerde weergave tonen"):
     st.session_state["show_all_modes"] = True
 
 # ✅ Query-string uitlezen bij laden van pagina
-query_params = st.experimental_get_query_params()
+query_params = st.query_params
 query_mode = query_params.get("mode", [None])[0]
 
 # Als er een geldige modus in de query zit, instellen en rerun
