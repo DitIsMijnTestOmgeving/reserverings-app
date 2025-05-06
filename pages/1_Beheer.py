@@ -1,10 +1,24 @@
 import streamlit as st
+import time as systime
 from utils import get_supabase_client
 
+# Supabase client
 supa = get_supabase_client()
 
-st.set_page_config(page_title="Beheer reserveringen", page_icon="🛠️", layout="wide")
+# Pagina instellingen
+st.set_page_config(page_title="Beheer reserveringen", page_icon="🚰", layout="wide")
 st.title("🛠️ Beheer reserveringen")
+
+# ▼ Verwerk ?approve / ?reject uit e-mail
+params = st.query_params
+if "approve" in params and "res_id" in params:
+    supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
+    st.success(f"✅ Reservering #{params['res_id'][0]} is goedgekeurd.")
+    st.query_params.clear()
+elif "reject" in params and "res_id" in params:
+    supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
+    st.error(f"❌ Reservering #{params['res_id'][0]} is afgewezen.")
+    st.query_params.clear()
 
 # ▼ Openstaande aanvragen
 st.markdown("_Hieronder kun je openstaande aanvragen goedkeuren, afwijzen of verwijderen._")
