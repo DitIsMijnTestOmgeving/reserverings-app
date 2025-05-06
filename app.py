@@ -213,20 +213,6 @@ else:
 if mode == "Reserveren":
     st.title("Reservering maken")
 
-    st.markdown("""
-    <div style='margin-top: 10px; font-size: 14px;'>
-        🟨 <b>Gereserveerd</b> (wacht op goedkeuring)<br>
-        🟧 <b>Goedgekeurd</b> (wacht op uitgifte)<br>
-        🟥 <b>Uitgegeven</b> (nog niet retour)<br>
-        🟩 <b>Ingeleverd</b> (beschikbaar)
-    </div>
-    <style>
-        .block-container {
-            padding-top: 1rem !important;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
     import locale
     from datetime import time
 
@@ -350,16 +336,18 @@ elif mode == "Beheer":
 
 # 9) Sleutels
 elif mode == "Sleuteluitgifte":
-    st.title("🔑 Sleuteloverzicht")
+    st.title("🔑 Sleuteluitgifte")
 
     key_map = load_keys()
     bookings = supa.table("bookings").select("*").execute().data
 
+    # Alle unieke sleutels verzamelen
     alle_sleutels = []
     for sleutels in key_map.values():
         alle_sleutels.extend(s.strip() for s in sleutels.split(","))
     alle_sleutels = sorted(set(alle_sleutels), key=lambda x: int(x))
 
+    # Sleutelstatus bepalen
     html = """
     <style>
     .grid {
@@ -367,7 +355,6 @@ elif mode == "Sleuteluitgifte":
         grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
         gap: 6px;
         max-width: 100%;
-        margin-bottom: 16px;
     }
     .tegel {
         width: 40px;
@@ -377,14 +364,12 @@ elif mode == "Sleuteluitgifte":
         line-height: 40px;
         font-weight: bold;
         font-size: 12px;
-        color: #000;
     }
     </style>
     <div class='grid'>
     """
-
     for nr in alle_sleutels:
-        kleur = "#90ee90"  # standaard: groen
+        kleur = "#90ee90"  # standaard groen
         for r in bookings:
             if not r.get("access_keys"):
                 continue
@@ -392,23 +377,23 @@ elif mode == "Sleuteluitgifte":
             if nr in sleutel_lijst:
                 status = r.get("status", "")
                 if status == "Wachten":
-                    kleur = "#ffff99"  # geel
+                    kleur = "#ffff99"
                     break
                 elif status == "Goedgekeurd":
-                    kleur = "#ffb347"  # oranje
+                    kleur = "#ffb347"
                     break
                 elif str(status).startswith("Uitgegeven op"):
-                    kleur = "#ff6961"  # rood
+                    kleur = "#ff6961"
                     break
                 elif str(status).startswith("Ingeleverd op"):
-                    kleur = "#90ee90"  # groen
+                    kleur = "#90ee90"
                     break
         locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
         html += f"<div class='tegel' title='{locatie}' style='background-color: {kleur};'>{nr}</div>"
-
     html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
 
+    # Kleurenlegenda
     st.markdown("""
     <div style='margin-top: 10px; font-size: 14px;'>
         🟨 <b>Gereserveerd</b> (wacht op goedkeuring)<br>
@@ -418,8 +403,41 @@ elif mode == "Sleuteluitgifte":
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 📋 Uitgegeven sleutels")
+    # Formulier genereren
+    st.markdown("### 📋 Selecteer reservering om formulier te genereren")
+    goedgekeurd = [r for r in bookings if r["status"] == "Goedgekeurd"]
+    if goedgekeurd:
+        opties = {
+            f"#{r['id']} – {r['name']} ({r['date']} {r['time']})": r
+            for r in goedgekeurd
+        }
+        selectie = st.selectbox("Selecteer reservering", list(opties.keys()))
+        gekozen = opties[selectie]
 
+        if st.button("📄 Genereer afgifteformulier"):
+            doc = Document("Sleutel Afgifte Formulier.docx")
+            for para in doc.paragraphs:
+                para.text = para.text.replace("BEDRIJF", gekozen["name"])
+                para.text = para.text.replace("DATUM", gekozen["date"])
+                para.text = para.text.replace("TIJD", gekozen["time"])
+                para.text = para.text.replace("SLEUTELS", gekozen.get("access_keys", ""))
+                para.text = para.text.replace("LOCATIES", gekozen.get("access_locations", ""))
+
+            buffer = BytesIO()
+            doc.save(buffer)
+            buffer.seek(0)
+
+            st.download_button(
+                label="⬇️ Download ingevuld formulier",
+                data=buffer,
+                file_name="Sleutel_Afgifte_Formulier.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+    else:
+        st.info("Er zijn geen goedgekeurde reserveringen.")
+
+    # Uitgegeven sleutels weergeven
+    st.markdown("### 📋 Uitgegeven sleutels")
     sleutel_reserveringen = [
         {
             "Naam": r["name"],
@@ -430,12 +448,10 @@ elif mode == "Sleuteluitgifte":
             "Status": r["status"]
         }
         for r in bookings
-        if r["status"] in ("Goedgekeurd", "Wachten") and r.get("access_keys")
+        if r.get("access_keys") and r["status"] in ("Goedgekeurd", "Wachten", "Uitgegeven", "Ingeleverd") or str(r["status"]).startswith(("Uitgegeven op", "Ingeleverd op"))
     ]
-
     if sleutel_reserveringen:
-        df_sleutels = pd.DataFrame(sleutel_reserveringen)
-        df_sleutels = df_sleutels.sort_values(by="Datum")
+        df_sleutels = pd.DataFrame(sleutel_reserveringen).sort_values(by="Datum")
         st.dataframe(df_sleutels, use_container_width=True)
     else:
         st.info("Er zijn momenteel geen uitgegeven sleutels.")
