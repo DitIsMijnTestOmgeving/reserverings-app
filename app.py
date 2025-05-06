@@ -204,10 +204,19 @@ window.addEventListener("load", function() {
 """, height=0)
 
 # Toon afhankelijk van status
-if st.session_state["show_all_modes"]:
-    mode = st.sidebar.radio("Kies weergave:", ["Reserveren", "Beheer", "Sleuteluitgifte"])
+query_mode = st.query_params.get("mode", [None])[0]
+
+if query_mode in ["Beheer", "Sleuteluitgifte"]:
+    st.session_state["show_all_modes"] = True
+    st.session_state["gekozen_mode"] = query_mode
+    mode = query_mode
 else:
-    mode = "Reserveren"
+    if st.session_state["show_all_modes"]:
+        mode = st.sidebar.radio("Kies weergave:", ["Reserveren", "Beheer", "Sleuteluitgifte"], index=["Reserveren", "Beheer", "Sleuteluitgifte"].index(st.session_state.get("gekozen_mode", "Reserveren")))
+        st.session_state["gekozen_mode"] = mode
+    else:
+        mode = "Reserveren"
+
 
 # 7) Reserveren
 if mode == "Reserveren":
