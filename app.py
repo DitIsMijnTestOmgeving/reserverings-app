@@ -268,7 +268,7 @@ elif mode == "Beheer":
     st.markdown("_Hieronder kun je openstaande aanvragen accepteren, afwijzen of verwijderen._")
 
     rows = supa.table("bookings").select("*") \
-        .neq("status", "Goedgekeurd").neq("status", "Afgewezen") \
+        .eq("status", "Wachten") \
         .order("date").execute().data
 
     if not rows:
