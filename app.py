@@ -491,6 +491,7 @@ elif mode == "Sleuteluitgifte":
         alle_sleutels.extend(s.strip() for s in sleutels.split(","))
     alle_sleutels = sorted(set(alle_sleutels), key=lambda x: int(x))
 
+
     # Tegels tonen
     html = """
     <style>
@@ -554,6 +555,28 @@ elif mode == "Sleuteluitgifte":
                         file_name="Sleutel_Afgifte_Formulier.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
+    st.markdown("### 🔁 Sleutels retourmelden")
+
+    uitgegeven = supa.table("bookings").select("*").execute().data
+    uitgegeven = [r for r in uitgegeven if str(r["status"]).startswith("Uitgegeven op")]
+
+    if not uitgegeven:
+        st.info("Er zijn geen sleutels die retour gemeld kunnen worden.")
+    else:
+        for r in uitgegeven:
+            with st.expander(f"🔁 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
+                st.markdown(f"**Bedrijf:** {r['name']}")
+                st.markdown(f"**Datum:** {r['date']}")
+                st.markdown(f"**Tijd:** {r['time']}")
+                st.markdown(f"**Locaties:** {r.get('access_locations', '')}")
+                st.markdown(f"**Sleutels:** {r.get('access_keys', '')}")
+                st.markdown(f"**Status:** {r['status']}")
+
+                if st.button("🔁 Markeer als ingeleverd", key=f"retour_{r['id']}"):
+                    vandaag = datetime.date.today().isoformat()
+                    supa.table("bookings").update({"status": f"Ingeleverd op {vandaag}"}).eq("id", r["id"]).execute()
+                    st.success("Sleutels gemarkeerd als ingeleverd.")
+                    st.rerun()
 
 
 
