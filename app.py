@@ -189,6 +189,19 @@ if "show_all_modes" not in st.session_state:
 if st.sidebar.button("🔐", help="Geavanceerde weergave tonen"):
     st.session_state["show_all_modes"] = True
 
+# Sidebar automatisch inklappen bij openen
+components.html("""
+<script>
+window.addEventListener("load", function() {
+    const sidebar = window.parent.document.querySelector('aside[data-testid="stSidebar"]');
+    const toggleButton = window.parent.document.querySelector('button[title="Collapse sidebar"]');
+    if (sidebar && toggleButton && sidebar.offsetWidth > 250) {
+        toggleButton.click();
+    }
+});
+</script>
+""", height=0)
+
 # Toon afhankelijk van status
 if st.session_state["show_all_modes"]:
     mode = st.sidebar.radio("Kies weergave:", ["Reserveren", "Beheer", "Sleuteluitgifte"])
@@ -370,7 +383,20 @@ elif mode == "Sleutels":
     """
 
     for nr in alle_sleutels:
-        kleur = "#ff6961" if nr in gebruikte_sleutels else "#90ee90"
+        kleur = "#90ee90"  # standaard: groen
+        for r in bookings:
+            if not r.get("access_keys"):
+                continue
+            sleutel_lijst = [k.strip() for k in r["access_keys"].split(",") if k.strip()]
+            if nr in sleutel_lijst:
+                status = r.get("status", "")
+                if status in ("Goedgekeurd", "Wachten"):
+                    kleur = "#ff6961"  # rood
+                    break
+                elif str(status).startswith("Uitgegeven op"):
+                    kleur = "#bfbfbf"  # grijs
+                    break
+
         locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
         html += f"<div class='tegel' title='{locatie}' style='background-color: {kleur};'>{nr}</div>"
 
