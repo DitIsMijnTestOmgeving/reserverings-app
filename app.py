@@ -17,16 +17,21 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ➤ Sidebar links onzichtbaar maken op deze pagina
-# Let op: dit is alleen app.py — dus de hoofdpagina
+# Verander de titel in de sidebar van 'app' naar 'Reserveren'
 st.markdown("""
-<style>
-section[data-testid="stSidebar"] a[href*="Beheer"],
-section[data-testid="stSidebar"] a[href*="Sleuteluitgifte"] {
-    color: transparent !important;
-    pointer-events: none;
-}
-</style>
+    <style>
+    section[data-testid="stSidebar"] a[href="/"] {
+        font-weight: bold;
+    }
+    section[data-testid="stSidebar"] a[href="/"]::after {
+        content: "Reserveren";
+        position: absolute;
+        left: 1.5rem;
+    }
+    section[data-testid="stSidebar"] a[href="/"] > span {
+        visibility: hidden;
+    }
+    </style>
 """, unsafe_allow_html=True)
 
 # ➤ Supabase
