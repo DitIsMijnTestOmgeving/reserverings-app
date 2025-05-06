@@ -21,7 +21,7 @@ st.set_page_config(
 # Verander de titel in de sidebar van 'app' naar 'Reserveren'
 st.markdown("""
 <style>
-/* 📅 Reserveren: toon alleen icoon */
+/* 📅 Reserveren */
 section[data-testid="stSidebar"] a[href="/"] > span {
     visibility: hidden;
     position: relative;
@@ -33,42 +33,25 @@ section[data-testid="stSidebar"] a[href="/"]::after {
     font-size: 18px;
 }
 
-/* 🛠 Beheer: verberg en blokkeer op '/' */
-section[data-testid="stSidebar"] a[href$="/Beheer"] > span {
-    visibility: hidden;
-    position: relative;
-}
-section[data-testid="stSidebar"] a[href$="/Beheer"]::after {
-    content: "🛠";
-    position: absolute;
-    left: 1.3rem;
-    font-size: 18px;
-}
-body:has(main[data-testid="stAppViewContainer"] a[href='/']) 
-  section[data-testid="stSidebar"] a[href$="/Beheer"] {
+/* 🛠 Beheer - verberg en blokkeer enkel op '/' */
+body:has(main[data-testid="stAppViewContainer"] h1:has-text("Sleutelreservering aanvragen")) 
+  section[data-testid="stSidebar"] a[href$="/Beheer"],
+body:has(main[data-testid="stAppViewContainer"] h1:has-text("Sleutelreservering aanvragen")) 
+  section[data-testid="stSidebar"] a[href$="/Beheer"] * {
     color: transparent !important;
-    pointer-events: none;
+    pointer-events: none !important;
 }
 
-/* 🔑 Sleutels: verberg en blokkeer op '/' */
-section[data-testid="stSidebar"] a[href$="/Uitgifte"] > span {
-    visibility: hidden;
-    position: relative;
-}
-section[data-testid="stSidebar"] a[href$="/Uitgifte"]::after {
-    content: "🔑";
-    position: absolute;
-    left: 1.3rem;
-    font-size: 18px;
-}
-body:has(main[data-testid="stAppViewContainer"] a[href='/']) 
-  section[data-testid="stSidebar"] a[href$="/Uitgifte"] {
+/* 🔑 Sleuteluigifte - verberg en blokkeer enkel op '/' */
+body:has(main[data-testid="stAppViewContainer"] h1:has-text("Sleutelreservering aanvragen")) 
+  section[data-testid="stSidebar"] a[href$="/Uitgifte"],
+body:has(main[data-testid="stAppViewContainer"] h1:has-text("Sleutelreservering aanvragen")) 
+  section[data-testid="stSidebar"] a[href$="/Uitgifte"] * {
     color: transparent !important;
-    pointer-events: none;
+    pointer-events: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
-
 
 
 # ➤ Supabase
