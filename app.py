@@ -62,10 +62,10 @@ with col_logo:
 # Sidebar inklappen
 components.html("""
 <script>
-document.addEventListener("click", function(event) {
+window.addEventListener("load", function() {
     const sidebar = window.parent.document.querySelector('aside[data-testid="stSidebar"]');
-    const toggleButton = window.parent.document.querySelector('button[title="Collapse sidebar"]');
-    if (sidebar && toggleButton && !sidebar.contains(event.target)) {
+    const toggleButton = window.parent.document.querySelector("button[title='Collapse sidebar']");
+    if (sidebar && toggleButton && sidebar.offsetWidth > 250) {
         toggleButton.click();
     }
 });
@@ -349,12 +349,6 @@ elif mode == "Sleutels":
     key_map = load_keys()
     bookings = supa.table("bookings").select("*").execute().data
 
-    gebruikte_sleutels = set()
-    for r in bookings:
-        if r["status"] in ("Goedgekeurd", "Wachten"):
-            ks = r.get("access_keys") or ""
-            gebruikte_sleutels.update(k.strip() for k in ks.split(",") if k.strip())
-
     alle_sleutels = []
     for sleutels in key_map.values():
         alle_sleutels.extend(s.strip() for s in sleutels.split(","))
@@ -367,9 +361,9 @@ elif mode == "Sleutels":
         grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
         gap: 6px;
         max-width: 100%;
+        margin-bottom: 16px;
     }
     .tegel {
-        background-color: #90ee90;
         width: 40px;
         height: 40px;
         border-radius: 4px;
@@ -377,39 +371,46 @@ elif mode == "Sleutels":
         line-height: 40px;
         font-weight: bold;
         font-size: 12px;
+        color: #000;
     }
     </style>
     <div class='grid'>
     """
 
     for nr in alle_sleutels:
-        kleur = "#90ee90"  # standaard groen
-
+        kleur = "#90ee90"  # standaard: groen
         for r in bookings:
             if not r.get("access_keys"):
                 continue
-
             sleutel_lijst = [k.strip() for k in r["access_keys"].split(",") if k.strip()]
             if nr in sleutel_lijst:
                 status = r.get("status", "")
                 if status == "Wachten":
-                    kleur = "#ff6961"  # rood (gereserveerd, nog geen goedkeuring)
+                    kleur = "#ffff99"  # geel
                     break
                 elif status == "Goedgekeurd":
-                    kleur = "#ff6961"  # ook rood (wel goedgekeurd, maar nog niet uitgegeven)
+                    kleur = "#ffb347"  # oranje
                     break
                 elif str(status).startswith("Uitgegeven op"):
-                    kleur = "#bfbfbf"  # grijs
+                    kleur = "#ff6961"  # rood
                     break
                 elif str(status).startswith("Ingeleverd op"):
                     kleur = "#90ee90"  # groen
                     break
-
         locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
         html += f"<div class='tegel' title='{locatie}' style='background-color: {kleur};'>{nr}</div>"
 
     html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style='margin-top: 10px; font-size: 14px;'>
+        🟨 <b>Gereserveerd</b> (wacht op goedkeuring)<br>
+        🟧 <b>Goedgekeurd</b> (wacht op uitgifte)<br>
+        🟥 <b>Uitgegeven</b> (nog niet retour)<br>
+        🟩 <b>Ingeleverd</b> (beschikbaar)
+    </div>
+    """, unsafe_allow_html=True)
 
     st.markdown("### 📋 Uitgegeven sleutels")
 
@@ -427,12 +428,12 @@ elif mode == "Sleutels":
     ]
 
     if sleutel_reserveringen:
-        import pandas as pd
         df_sleutels = pd.DataFrame(sleutel_reserveringen)
         df_sleutels = df_sleutels.sort_values(by="Datum")
         st.dataframe(df_sleutels, use_container_width=True)
     else:
         st.info("Er zijn momenteel geen uitgegeven sleutels.")
+
 
 # 10) Sleuteluitgifte
 elif mode == "Uitgifte":
