@@ -43,8 +43,11 @@ supa = create_client(url, key)
 params = st.query_params
 if "approve" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
-    st.success("✅ De reservering is goedgekeurd.")
-    st.stop()
+    st.query_params.clear()
+    st.session_state["show_all_modes"] = True
+    st.session_state["gekozen_mode"] = "Beheer"
+    st.rerun()
+
 elif "reject" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
     st.error("❌ De reservering is afgewezen.")
