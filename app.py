@@ -153,7 +153,7 @@ def load_keys():
 def send_owner_email(res_id, name, date, time):
     approve_link = f"https://reserveringsapp-opmeer.onrender.com/?approve=true&res_id={res_id}"
     reject_link = f"https://reserveringsapp-opmeer.onrender.com/?reject=true&res_id={res_id}"
-    sleutels_link = "https://reserveringsapp-opmeer.onrender.com/?mode=Sleuteluitgifte"
+    sleutels_link = "https://reserveringsapp-opmeer.onrender.com/?mode=Beheer"
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[Reservering] Nieuwe aanvraag #{res_id}"
     msg["From"] = os.environ["SMTP_USER"]
@@ -185,6 +185,13 @@ st.sidebar.markdown("## Modus kiezen")
 if "show_all_modes" not in st.session_state:
     st.session_state["show_all_modes"] = False
 
+# Kijk of mode=Beheer of Sleuteluitgifte is opgegeven via URL
+if "mode" in params:
+    gekozen_mode = params["mode"][0]
+    if gekozen_mode in ("Beheer", "Sleuteluitgifte"):
+        st.session_state["show_all_modes"] = True
+        st.session_state["gekozen_mode"] = gekozen_mode
+
 # 🔐 knop om beheer en uitgifte te ontgrendelen
 if st.sidebar.button("🔐", help="Geavanceerde weergave tonen"):
     st.session_state["show_all_modes"] = True
@@ -204,9 +211,16 @@ window.addEventListener("load", function() {
 
 # Toon afhankelijk van status
 if st.session_state["show_all_modes"]:
-    mode = st.sidebar.radio("Kies weergave:", ["Reserveren", "Beheer", "Sleuteluitgifte"])
+    mode = st.sidebar.radio(
+        "Kies weergave:",
+        ["Reserveren", "Beheer", "Sleuteluitgifte"],
+        index=["Reserveren", "Beheer", "Sleuteluitgifte"].index(
+            st.session_state.get("gekozen_mode", "Reserveren")
+        )
+    )
 else:
     mode = "Reserveren"
+
 
 
 # 7) Reserveren
