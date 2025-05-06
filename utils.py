@@ -2,6 +2,9 @@ import os
 from supabase import create_client
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+import smtplib
 
 def get_supabase_client():
     url = os.environ["SUPABASE_URL"]
@@ -80,4 +83,57 @@ def replace_bookmark_text(doc, bookmark_name, replacement_text):
         parent.insert(index + 1, run)
 
 def send_owner_email(res_id, name, date, time):
-    print(f"[TESTMAIL] Reservering #{res_id} voor {name} op {date} om {time}")
+    print(f"[MAILTEST] Verstuur poging voor reservering #{res_id}")
+    approve_link = f"https://reserveringsapp-opmeer.onrender.com/?approve=true&res_id={res_id}"
+    reject_link = f"https://reserveringsapp-opmeer.onrender.com/?reject=true&res_id={res_id}"
+    beheer_link = "https://reserveringsapp-opmeer.onrender.com/Beheer"
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"[Reservering] Nieuwe aanvraag #{res_id}"
+    msg["From"] = os.environ["SMTP_USER"]
+    msg["To"] = os.environ["OWNER_EMAIL"]
+
+    html = f"""
+    <html>
+    <body style="font-family:Arial,sans-serif;font-size:14px;">
+      <p>Er is een nieuwe reserveringsaanvraag:</p>
+      <p>
+        <b>Reservering:</b> #{res_id}<br>
+        <b>Bedrijf:</b> {name}<br>
+        <b>Datum:</b> {date}<br>
+        <b>Tijd:</b> {time}
+      </p>
+
+      <table cellspacing="10" cellpadding="0">
+        <tr>
+          <td>
+            <a href="{approve_link}" style="background-color:#4CAF50;color:white;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">
+              ✅ Goedkeuren
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <a href="{reject_link}" style="background-color:#f44336;color:white;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">
+              ❌ Afwijzen
+            </a>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <a href="{beheer_link}" style="background-color:#2196F3;color:white;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">
+              🔑 Beheerpagina openen
+            </a>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+    """
+
+    msg.attach(MIMEText(html, "html"))
+
+    with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as server:
+        server.starttls()
+        server.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
+        server.send_message(msg)
