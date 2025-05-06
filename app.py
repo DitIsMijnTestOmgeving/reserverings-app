@@ -416,12 +416,10 @@ elif mode == "Sleuteluitgifte":
 
         if st.button("📄 Genereer afgifteformulier"):
             doc = Document("Sleutel Afgifte Formulier.docx")
-            for para in doc.paragraphs:
-                para.text = para.text.replace("BEDRIJF", gekozen["name"])
-                para.text = para.text.replace("DATUM", gekozen["date"])
-                para.text = para.text.replace("TIJD", gekozen["time"])
-                para.text = para.text.replace("SLEUTELS", gekozen.get("access_keys", ""))
-                para.text = para.text.replace("LOCATIES", gekozen.get("access_locations", ""))
+            replace_bookmark_text(doc, "Firma", gekozen["name"])
+            replace_bookmark_text(doc, "AfgifteDatum", gekozen["date"])
+            replace_bookmark_text(doc, "Sleutelnummer", gekozen.get("access_keys", ""))
+            replace_bookmark_text(doc, "Bestemd", gekozen.get("access_locations", ""))
 
             buffer = BytesIO()
             doc.save(buffer)
@@ -458,103 +456,14 @@ elif mode == "Sleuteluitgifte":
 
 
 # 10) Sleuteluitgifte
-elif mode == "Uitgifte":
-    st.title("🔑 Sleutels uitgeven")
-
-    key_map = load_keys()
-    bookings = supa.table("bookings").select("*").eq("status", "Goedgekeurd").execute().data
-
-    gebruikte_sleutels = set()
-    for r in bookings:
-        ks = r.get("access_keys") or ""
-        gebruikte_sleutels.update(k.strip() for k in ks.split(",") if k.strip())
-
-    alle_sleutels = sorted(gebruikte_sleutels, key=lambda x: int(x))
-
-    html = """
-    <style>
-    .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
-        gap: 6px;
-        max-width: 100%;
-    }
-    .tegel {
-        background-color: #ffd966;
-        width: 40px;
-        height: 40px;
-        border-radius: 4px;
-        text-align: center;
-        line-height: 40px;
-        font-weight: bold;
-        font-size: 12px;
-    }
-    </style>
-    <div class='grid'>
-    """
-
-    for nr in alle_sleutels:
-        locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
-        html += f"<div class='tegel' title='{locatie}'>{nr}</div>"
-
-    html += "</div>"
-    st.markdown(html, unsafe_allow_html=True)
-    st.markdown("""
-    <div style='margin-top: 10px; font-size: 14px;'>
-    🟥 <b>Gereserveerd</b> (wacht op goedkeuring)<br>
-    ⬜ <b>Uitgegeven</b> (nog niet retour)<br>
-    ✅ <b>Ingeleverd</b> (beschikbaar)
-    </div>
-""", unsafe_allow_html=True)
-    st.markdown("### 📋 Selecteer reservering om formulier te genereren")
-
-    opties = {
-        f"#{r['id']} – {r['name']} ({r['date']} {r['time']})": r
-        for r in bookings
-    }
-
-    selectie = st.selectbox("Selecteer reservering", list(opties.keys()))
-    gekozen = opties[selectie]
-
-    if st.button("📄 Genereer afgifteformulier"):
-        doc = Document("Sleutel Afgifte Formulier.docx")
-
-        for para in doc.paragraphs:
-            para.text = para.text.replace("BEDRIJF", gekozen["name"])
-            para.text = para.text.replace("DATUM", gekozen["date"])
-            para.text = para.text.replace("TIJD", gekozen["time"])
-            para.text = para.text.replace("SLEUTELS", gekozen.get("access_keys", ""))
-            para.text = para.text.replace("LOCATIES", gekozen.get("access_locations", ""))
-
-        buffer = BytesIO()
-        doc.save(buffer)
-        buffer.seek(0)
-
-        st.download_button(
-            label="⬇️ Download ingevuld formulier",
-            data=buffer,
-            file_name="Sleutel_Afgifte_Formulier.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
-# 11) Agenda
-# Toegevoegd in mode == "Sleuteluitgifte"
-
 elif mode == "Sleuteluitgifte":
-    st.title("🕒 Sleuteluitgifte bevestigen")
+    st.title("🔑 Sleuteluitgifte")
 
     key_map = load_keys()
     bookings = supa.table("bookings").select("*").execute().data
 
-    gebruikte_sleutels = set()
-    for r in bookings:
-        if r["status"] in ("Goedgekeurd", "Wachten"):
-            ks = r.get("access_keys") or ""
-            gebruikte_sleutels.update(k.strip() for k in ks.split(",") if k.strip())
-
-    alle_sleutels = []
-    for sleutels in key_map.values():
-        alle_sleutels.extend(s.strip() for s in sleutels.split(","))
-    alle_sleutels = sorted(set(alle_sleutels), key=lambda x: int(x))
+    # Tegeloverzicht
+    alle_sleutels = sorted({k.strip() for v in key_map.values() for k in v.split(",")}, key=lambda x: int(x))
 
     html = """
     <style>
@@ -565,7 +474,6 @@ elif mode == "Sleuteluitgifte":
         max-width: 100%;
     }
     .tegel {
-        background-color: #90ee90;
         width: 40px;
         height: 40px;
         border-radius: 4px;
@@ -577,70 +485,83 @@ elif mode == "Sleuteluitgifte":
     </style>
     <div class='grid'>
     """
+
     for nr in alle_sleutels:
         kleur = "#90ee90"
         for r in bookings:
             if not r.get("access_keys"):
                 continue
-            sleutel_lijst = [k.strip() for k in r["access_keys"].split(",") if k.strip()]
+            sleutel_lijst = [k.strip() for k in r["access_keys"].split(",")]
             if nr in sleutel_lijst:
                 status = r.get("status", "")
                 if status == "Wachten":
-                    kleur = "#ffff99"
-                    break
+                    kleur = "#ffff99"; break
                 elif status == "Goedgekeurd":
-                    kleur = "#ffb347"
-                    break
+                    kleur = "#ffb347"; break
                 elif str(status).startswith("Uitgegeven op"):
-                    kleur = "#ff6961"
-                    break
+                    kleur = "#ff6961"; break
                 elif str(status).startswith("Ingeleverd op"):
-                    kleur = "#90ee90"
-                    break
+                    kleur = "#90ee90"; break
         locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
         html += f"<div class='tegel' title='{locatie}' style='background-color: {kleur};'>{nr}</div>"
+
     html += "</div>"
     st.markdown(html, unsafe_allow_html=True)
 
-    st.markdown("### 📄 Goedkeuring en afgifteformulier")
+    # Kleurenlegenda
+    st.markdown("""
+    <div style='margin-top: 10px; font-size: 14px;'>
+        🟨 <b>Gereserveerd</b> (wacht op goedkeuring)<br>
+        🟧 <b>Goedgekeurd</b> (wacht op uitgifte)<br>
+        🟥 <b>Uitgegeven</b> (nog niet retour)<br>
+        🟩 <b>Ingeleverd</b> (beschikbaar)
+    </div>
+    """, unsafe_allow_html=True)
 
-    goedgekeurd = supa.table("bookings").select("*").eq("status", "Goedgekeurd").execute().data
+    # Formulier en status
+    st.markdown("### 📋 Selecteer reservering")
+
+    goedgekeurd = [r for r in bookings if r["status"] == "Goedgekeurd"]
     if not goedgekeurd:
         st.info("Er zijn geen goedgekeurde reserveringen.")
     else:
-        for r in goedgekeurd:
-            with st.expander(f"📄 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
-                st.markdown(f"**Bedrijf:** {r['name']}")
-                st.markdown(f"**Datum:** {r['date']}")
-                st.markdown(f"**Tijd:** {r['time']}")
-                st.markdown(f"**Locaties:** {r.get('access_locations', '')}")
-                st.markdown(f"**Sleutels:** {r.get('access_keys', '')}")
+        opties = {
+            f"#{r['id']} – {r['name']} ({r['date']} {r['time']})": r
+            for r in goedgekeurd
+        }
+        selectie = st.selectbox("Reservering kiezen", list(opties.keys()))
+        gekozen = opties[selectie]
 
-                col1, col2 = st.columns(2)
-                if col1.button(f"📄 Genereer formulier", key=f"form_{r['id']}"):
-                    doc = Document("Sleutel Afgifte Formulier.docx")
-                    replace_bookmark_text(doc, "Firma", r["name"])
-                    replace_bookmark_text(doc, "Sleutelnummer", r.get("access_keys", ""))
-                    replace_bookmark_text(doc, "Bestemd", r.get("access_locations", ""))
-                    replace_bookmark_text(doc, "AfgifteDatum", r["date"])
+        st.markdown(f"**Bedrijf:** {gekozen['name']}  \n"
+                    f"**Datum:** {gekozen['date']}  \n"
+                    f"**Tijd:** {gekozen['time']}  \n"
+                    f"**Locaties:** {gekozen.get('access_locations', '')}  \n"
+                    f"**Sleutels:** {gekozen.get('access_keys', '')}")
 
-                    buffer = BytesIO()
-                    doc.save(buffer)
-                    buffer.seek(0)
+        col1, col2 = st.columns(2)
+        if col1.button("📄 Download afgifteformulier"):
+            doc = Document("Sleutel Afgifte Formulier.docx")
+            for para in doc.paragraphs:
+                para.text = para.text.replace("BEDRIJF", gekozen["name"])
+                para.text = para.text.replace("DATUM", gekozen["date"])
+                para.text = para.text.replace("TIJD", gekozen["time"])
+                para.text = para.text.replace("SLEUTELS", gekozen.get("access_keys", ""))
+                para.text = para.text.replace("LOCATIES", gekozen.get("access_locations", ""))
 
-                    st.download_button(
-                        label="⬇️ Download formulier",
-                        data=buffer,
-                        file_name="Sleutel_Afgifte_Formulier.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
+            buffer = BytesIO()
+            doc.save(buffer)
+            buffer.seek(0)
 
-                if col2.button("✅ Bevestig afgifte", key=f"uitgifte_{r['id']}"):
-                    vandaag = datetime.date.today().isoformat()
-                    supa.table("bookings").update({"status": f"Uitgegeven op {vandaag}"}).eq("id", r["id"]).execute()
-                    st.success("Sleutel gemarkeerd als uitgegeven.")
-                    st.rerun()
+            st.download_button(
+                label="⬇️ Download ingevuld formulier",
+                data=buffer,
+                file_name="Sleutel_Afgifte_Formulier.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
 
-
-
+        if col2.button("✅ Markeer als uitgegeven"):
+            vandaag = datetime.date.today().isoformat()
+            supa.table("bookings").update({"status": f"Uitgegeven op {vandaag}"}).eq("id", gekozen["id"]).execute()
+            st.success("Status bijgewerkt.")
+            st.rerun()
 
