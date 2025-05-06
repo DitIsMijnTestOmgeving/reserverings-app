@@ -19,11 +19,21 @@ def replace_bookmark_text(doc, bookmark_name, replacement_text):
     for bookmark_start in doc.element.xpath(f'//w:bookmarkStart[@w:name="{bookmark_name}"]'):
         parent = bookmark_start.getparent()
         index = parent.index(bookmark_start)
+
+        # Verwijder run direct na bookmark als die underscores bevat
+        if index + 1 < len(parent):
+            next_elem = parent[index + 1]
+            texts = next_elem.xpath(".//w:t")
+            if texts and texts[0].text and "_" in texts[0].text:
+                parent.remove(next_elem)
+
+        # Voeg de nieuwe tekst toe
         run = OxmlElement("w:r")
         text = OxmlElement("w:t")
         text.text = replacement_text
         run.append(text)
         parent.insert(index + 1, run)
+
 
 # Supabase
 url = os.environ["SUPABASE_URL"]
@@ -168,9 +178,23 @@ def send_owner_email(res_id, name, date, time):
         s.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
         s.send_message(msg)
 
-# 6) Modus — géén inlog meer, alles openbaar
+# 6) Modus – standaard alleen "Reserveren", 🔐 toont extra opties
 st.sidebar.markdown("## Modus kiezen")
-mode = st.sidebar.radio("Kies weergave:", ["Reserveren", "Beheer", "Sleuteluitgifte"])
+
+# Zorg dat de status onthouden wordt
+if "show_all_modes" not in st.session_state:
+    st.session_state["show_all_modes"] = False
+
+# 🔐 knop om beheer en uitgifte te ontgrendelen
+if st.sidebar.button("🔐", help="Geavanceerde weergave tonen"):
+    st.session_state["show_all_modes"] = True
+
+# Toon afhankelijk van status
+if st.session_state["show_all_modes"]:
+    mode = st.sidebar.radio("Kies weergave:", ["Reserveren", "Beheer", "Sleuteluitgifte"])
+else:
+    mode = "Reserveren"
+
 
 # 7) Reserveren
 if mode == "Reserveren":
