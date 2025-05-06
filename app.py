@@ -170,7 +170,7 @@ def send_owner_email(res_id, name, date, time):
 
 # 6) Modus — géén inlog meer, alles openbaar
 st.sidebar.markdown("## Modus kiezen")
-mode = st.sidebar.radio("Kies weergave:", ["Reserveren", "Beheer", "Agenda"])
+mode = st.sidebar.radio("Kies weergave:", ["Reserveren", "Beheer", "Sleuteluitgifte"])
 
 # 7) Reserveren
 if mode == "Reserveren":
@@ -450,10 +450,56 @@ elif mode == "Uitgifte":
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
 # 11) Agenda
-elif mode == "Agenda":
+elif mode == "Sleuteluitgifte":
     st.title("🗓️ Sleuteluitgifte bevestigen")
-    goedgekeurd = supa.table("bookings").select("*").eq("status", "Goedgekeurd").execute().data
 
+    key_map = load_keys()
+    bookings = supa.table("bookings").select("*").execute().data
+
+    gebruikte_sleutels = set()
+    for r in bookings:
+        if r["status"] in ("Goedgekeurd", "Wachten"):
+            ks = r.get("access_keys") or ""
+            gebruikte_sleutels.update(k.strip() for k in ks.split(",") if k.strip())
+
+    alle_sleutels = []
+    for sleutels in key_map.values():
+        alle_sleutels.extend(s.strip() for s in sleutels.split(","))
+    alle_sleutels = sorted(set(alle_sleutels), key=lambda x: int(x))
+
+    # Tegels tonen
+    html = """
+    <style>
+    .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+        gap: 6px;
+        max-width: 100%;
+    }
+    .tegel {
+        background-color: #90ee90;
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        text-align: center;
+        line-height: 40px;
+        font-weight: bold;
+        font-size: 12px;
+    }
+    </style>
+    <div class='grid'>
+    """
+    for nr in alle_sleutels:
+        kleur = "#ff6961" if nr in gebruikte_sleutels else "#90ee90"
+        locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
+        html += f"<div class='tegel' title='{locatie}' style='background-color: {kleur};'>{nr}</div>"
+
+    html += "</div>"
+    st.markdown(html, unsafe_allow_html=True)
+
+    st.markdown("### 📄 Goedkeuring en afgifteformulier")
+
+    goedgekeurd = supa.table("bookings").select("*").eq("status", "Goedgekeurd").execute().data
     if not goedgekeurd:
         st.info("Er zijn geen goedgekeurde reserveringen.")
     else:
@@ -467,7 +513,6 @@ elif mode == "Agenda":
 
                 if st.button(f"📄 Genereer & markeer als uitgegeven", key=f"agenda_print_{r['id']}"):
                     doc = Document("Sleutel Afgifte Formulier.docx")
-                    
                     replace_bookmark_text(doc, "Firma", r["name"])
                     replace_bookmark_text(doc, "Sleutelnummer", r.get("access_keys", ""))
                     replace_bookmark_text(doc, "Bestemd", r.get("access_locations", ""))
@@ -485,5 +530,6 @@ elif mode == "Agenda":
                         file_name="Sleutel_Afgifte_Formulier.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
+
 
 
