@@ -19,19 +19,26 @@ st.set_page_config(
 
 # Verander de titel in de sidebar van 'app' naar 'Reserveren'
 st.markdown("""
-    <style>
-    section[data-testid="stSidebar"] a[href="/"] {
-        font-weight: bold;
-    }
-    section[data-testid="stSidebar"] a[href="/"]::after {
-        content: "Reserveren";
-        position: absolute;
-        left: 1.5rem;
-    }
-    section[data-testid="stSidebar"] a[href="/"] > span {
-        visibility: hidden;
-    }
-    </style>
+<style>
+/* Verberg de Beheer/Uitgifte-links in sidebar op hoofdpagina */
+section[data-testid="stSidebar"] a[href$="/Beheer"],
+section[data-testid="stSidebar"] a[href$="/Uitgifte"] {
+    color: transparent !important;
+    pointer-events: none;
+}
+
+/* Verander de 'app' linknaam naar 'Reserveren' */
+section[data-testid="stSidebar"] a[href="/"] > span {
+    visibility: hidden;
+    position: relative;
+}
+section[data-testid="stSidebar"] a[href="/"]::after {
+    content: "Reserveren";
+    position: absolute;
+    left: 1.5rem;
+    color: inherit;
+}
+</style>
 """, unsafe_allow_html=True)
 
 # ➤ Supabase
