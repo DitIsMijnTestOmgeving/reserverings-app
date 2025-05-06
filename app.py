@@ -1,7 +1,7 @@
 import streamlit as st
-from datetime import time
 import datetime
-import time
+import time as systime
+from datetime import time
 
 from utils import (
     get_supabase_client,
@@ -80,13 +80,13 @@ params = st.query_params
 if "approve" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
     st.query_params.clear()
-    time.sleep(1)  # Wacht even tot Supabase klaar is
+    systime.sleep(1)  # Wacht even tot Supabase klaar is
     st.switch_page("pages/1_Beheer.py")
 
 elif "reject" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
     st.query_params.clear()
-    time.sleep(1)  # Wacht even tot Supabase klaar is
+    systime.sleep(1)  # Wacht even tot Supabase klaar is
     st.switch_page("pages/1_Beheer.py")
 
 
