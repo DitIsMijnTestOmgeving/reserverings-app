@@ -36,7 +36,7 @@ bookings = supa.table("bookings").select("*").execute().data
 # Statuskleur per sleutelnummer
 kleur_per_sleutel = {}
 for r in bookings:
-    status = r.get("status", "")
+    status = str(r.get("status", "")).strip()
     sleutels = r.get("access_keys", "")
     if not sleutels:
         continue
@@ -48,9 +48,9 @@ for r in bookings:
             kleur_per_sleutel[s] = "#d3d3d3"  # lichtgrijs
         elif status == "Goedgekeurd":
             kleur_per_sleutel[s] = "#ffb347"
-        elif str(status).startswith("Uitgegeven op"):
+        elif status.startswith("Uitgegeven op"):
             kleur_per_sleutel[s] = "#ff6961"
-        elif str(status).startswith("Ingeleverd op"):
+        elif status.startswith("Ingeleverd op"):
             kleur_per_sleutel[s] = "#90ee90"
 
 # Tegeloverzicht
@@ -76,7 +76,7 @@ html = """
 <div class='grid'>
 """
 for nr in alle_sleutels:
-    kleur = kleur_per_sleutel.get(nr, "#90ee90")
+    kleur = kleur_per_sleutel.get(nr, "#e0e0e0")  # fallback grijs
     locatie = next((loc for loc, ks in key_map.items() if nr in ks), "")
     html += f"<div class='tegel' title='{locatie}' style='background-color: {kleur};'>{nr}</div>"
 html += "</div>"
@@ -99,7 +99,7 @@ if "uitgifte_buffer" not in st.session_state:
     st.session_state["uitgifte_buffer"] = None
     st.session_state["uitgifte_id"] = None
 
-goedgekeurd = [r for r in bookings if r["status"] == "Goedgekeurd"]
+goedgekeurd = [r for r in bookings if str(r["status"]).strip() == "Goedgekeurd"]
 for r in goedgekeurd:
     with st.expander(f"📋 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
         st.write(f"**Bedrijf**: {r['name']}")
@@ -139,7 +139,7 @@ for r in goedgekeurd:
 
 # Sleutels retourmelden
 st.markdown("### 🔁 Sleutels retourmelden")
-uitgegeven = [r for r in bookings if str(r["status"]).startswith("Uitgegeven op")]
+uitgegeven = [r for r in bookings if str(r["status"]).strip().startswith("Uitgegeven op")]
 if uitgegeven:
     for r in uitgegeven:
         with st.expander(f"🔁 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
