@@ -1,31 +1,18 @@
 import streamlit as st
-from utils import get_supabase_client
+from utils import get_supabase_client, send_confirmation_email
 
-# Supabase client
 supa = get_supabase_client()
 
-# Pagina instellingen
 st.set_page_config(page_title="Beheer reserveringen", page_icon="🛠️", layout="wide")
 st.title("🛠️ Beheer reserveringen")
 
-# Sidebar styling – icon-only en blokkeren op de hoofdpagina
-st.markdown("""
-<style>
-section[data-testid="stSidebar"] a[href$="/Beheer"] > span {
-    visibility: hidden;
-    position: relative;
-}
-section[data-testid="stSidebar"] a[href$="/Beheer"]::after {
-    content: "🛠️";
-    position: absolute;
-    left: 1.3rem;
-    font-size: 18px;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ✅ Verwerk query uit e-mail
+# Alleen toegang als de juiste geheime query is meegegeven
 params = st.query_params
+if params.get("key", [""])[0] != st.secrets.get("TOEGANGSCODE"):
+    st.error("⛔ Geen toegang tot deze pagina.")
+    st.stop()
+
+# ✅ Verwerk query vanuit e-mail
 if "approve" in params and "res_id" in params:
     res_id = int(params["res_id"][0])
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", res_id).execute()
@@ -54,6 +41,7 @@ else:
 
             if col1.button("✅ Goedkeuren", key=f"g{r['id']}"):
                 supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", r["id"]).execute()
+                send_confirmation_email(r["email"], r["name"], r["date"], r["time"])
                 st.success("Goedgekeurd.")
                 st.rerun()
 
@@ -61,15 +49,15 @@ else:
                 supa.table("bookings").update({"status": "Afgewezen"}).eq("id", r["id"]).execute()
                 st.rerun()
 
-            if col3.button("🗑️ Verwijder", key=f"d{r['id']}"):
+            if col3.button("🗑️ Verwijderen", key=f"d{r['id']}"):
                 supa.table("bookings").delete().eq("id", r["id"]).execute()
                 st.rerun()
 
-# ▼ Tabel: alle reserveringen
+# ▼ Tabel met alle reserveringen
 st.subheader("📋 Alle reserveringen")
 all_rows = supa.table("bookings").select("*").order("date").execute().data
 
-tabel_data = [
+data = [
     {
         "ID": x["id"],
         "Naam": x["name"],
@@ -82,10 +70,11 @@ tabel_data = [
         "Status": x["status"]
     } for x in all_rows
 ]
-st.dataframe(tabel_data, height=450)
 
-# ▼ Handmatig verwijderen
-st.subheader("🗑️ Reservering verwijderen")
+st.dataframe(data, height=450)
+
+# ▼ Verwijderen
+st.subheader("🗑️ Verwijder reservering")
 verwijderbare = [
     {"id": x["id"], "label": f"#{x['id']} – {x['name']} ({x['date']} {x['time']})"}
     for x in all_rows
@@ -93,9 +82,9 @@ verwijderbare = [
 
 if verwijderbare:
     opties = {r["label"]: r["id"] for r in verwijderbare}
-    selectie = st.selectbox("Kies een reservering om te verwijderen:", list(opties.keys()))
-    if st.button("Verwijder geselecteerde reservering"):
-        supa.table("bookings").delete().eq("id", opties[selectie]).execute()
+    keuze = st.selectbox("Kies een reservering:", list(opties.keys()))
+    if st.button("Verwijderen"):
+        supa.table("bookings").delete().eq("id", opties[keuze]).execute()
         st.success("Reservering verwijderd.")
         st.rerun()
 else:
