@@ -33,8 +33,11 @@ st.title("🔑 Sleuteluitgifte")
 key_map = load_keys()
 bookings = supa.table("bookings").select("*").execute().data
 
-# Statuskleur per sleutelnummer
-kleur_per_sleutel = {}
+# Statuskleur per sleutelnummer, standaard alles groen
+alle_sleutels_set = set(k.strip() for v in load_keys().values() for k in v.split(","))
+kleur_per_sleutel = {sleutel: "#90ee90" for sleutel in alle_sleutels_set}  # standaard groen
+
+# Overschrijf op basis van status in actuele reserveringen
 for r in bookings:
     status = r.get("status", "")
     sleutels = r.get("access_keys", "")
@@ -51,7 +54,7 @@ for r in bookings:
         elif str(status).startswith("Uitgegeven op"):
             kleur_per_sleutel[s] = "#ff6961"  # rood
         elif str(status).startswith("Ingeleverd op"):
-            kleur_per_sleutel[s] = "#90ee90"  # groen
+            kleur_per_sleutel[s] = "#90ee90"  # expliciet groen (terug)
 
 
 # Tegeloverzicht
