@@ -36,7 +36,7 @@ bookings = supa.table("bookings").select("*").execute().data
 # Statuskleur per sleutelnummer
 kleur_per_sleutel = {}
 for r in bookings:
-    status = str(r.get("status", "")).strip()
+    status = r.get("status", "")
     sleutels = r.get("access_keys", "")
     if not sleutels:
         continue
@@ -45,13 +45,14 @@ for r in bookings:
         if not s:
             continue
         if status == "Wachten":
-            kleur_per_sleutel[s] = "#d3d3d3"  # lichtgrijs
+            kleur_per_sleutel[s] = "#d3d3d3"  # grijs
         elif status == "Goedgekeurd":
-            kleur_per_sleutel[s] = "#ffb347"
-        elif status.startswith("Uitgegeven op"):
-            kleur_per_sleutel[s] = "#ff6961"
-        elif status.startswith("Ingeleverd op"):
-            kleur_per_sleutel[s] = "#90ee90"
+            kleur_per_sleutel[s] = "#FFD700"  # geel
+        elif str(status).startswith("Uitgegeven op"):
+            kleur_per_sleutel[s] = "#ff6961"  # rood
+        elif str(status).startswith("Ingeleverd op"):
+            kleur_per_sleutel[s] = "#90ee90"  # groen
+
 
 # Tegeloverzicht
 alle_sleutels = sorted(set(k.strip() for v in key_map.values() for k in v.split(",")), key=lambda x: int(x))
