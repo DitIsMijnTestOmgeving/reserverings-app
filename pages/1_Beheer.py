@@ -30,14 +30,18 @@ supa = get_supabase_client()
 st.title("🛠️ Beheer reserveringen")
 
 # Verwerk goedkeuren/afwijzen via e-mail-link
-if "approve" in params and "res_id" in params:
-    res_id = int(params["res_id"][0])
+res_id_str = params.get("res_id")
+try:
+    res_id = int(res_id_str[0] if isinstance(res_id_str, list) else res_id_str)
+except (TypeError, ValueError):
+    res_id = None
+
+if res_id and "approve" in params:
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", res_id).execute()
     st.success(f"✅ Reservering #{res_id} is goedgekeurd.")
     st.query_params.clear()
     st.stop()
-elif "reject" in params and "res_id" in params:
-    res_id = int(params["res_id"][0])
+elif res_id and "reject" in params:
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", res_id).execute()
     st.error(f"❌ Reservering #{res_id} is afgewezen.")
     st.query_params.clear()
