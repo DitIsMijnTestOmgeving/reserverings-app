@@ -13,7 +13,10 @@ st.set_page_config(page_title="Sleuteluitgifte", page_icon="🔑", layout="wide"
 if "beheer_toegang" not in st.session_state:
     st.session_state["beheer_toegang"] = False
 
-if not st.session_state["beheer_toegang"]:
+params = st.query_params
+via_link = params.get("via") == "mail"
+
+if not st.session_state["beheer_toegang"] and not via_link:
     wachtwoord = st.text_input("Voer beheerderswachtwoord in:", type="password")
     if st.button("Inloggen"):
         if wachtwoord == os.environ.get("BEHEER_WACHTWOORD"):

@@ -1,7 +1,7 @@
 # ✅ 1_Beheer.py
 import streamlit as st
 import os
-from utils import get_supabase_client
+from utils import get_supabase_client, send_access_link_email
 
 # Pagina-instellingen
 st.set_page_config(page_title="Beheer reserveringen", page_icon="🛠️", layout="wide")
@@ -32,7 +32,17 @@ if not st.session_state["beheer_toegang"] and not via_link:
 # Supabase client
 supa = get_supabase_client()
 
+# Titel en functie voor e-mail delen
 st.title("🛠️ Beheer reserveringen")
+
+with st.expander("🔗 Toegang URL delen (Sleuteluitgifte)", expanded=False):
+    email_ontvanger = st.text_input("Voer e-mailadres in:")
+    if st.button("📧 Verstuur toegang", key="stuur_toegang"):
+        if email_ontvanger:
+            send_access_link_email(email_ontvanger)
+            st.success("✅ E-mail verzonden met toegang tot Sleuteluitgiftepagina.")
+        else:
+            st.warning("Vul een geldig e-mailadres in.")
 
 # Verwerk goedkeuren/afwijzen via e-mail-link
 res_id_str = params.get("res_id")

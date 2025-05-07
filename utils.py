@@ -175,3 +175,35 @@ def send_confirmation_email(email, name, date, time):
             server.send_message(msg)
     except Exception as e:
         print(f"[MAILFOUT] Bevestigingsmail mislukt: {e}")
+
+def send_access_link_email(email, naam="Gebruiker"):
+    link = "https://reserveringsapp-opmeer.onrender.com/Sleuteluitgifte?via=mail"
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Toegang tot Sleuteluitgiftepagina"
+    msg["From"] = os.environ["SMTP_USER"]
+    msg["To"] = email
+
+    html = f"""
+    <html>
+    <body style="font-family:Arial,sans-serif;font-size:14px;">
+      <p>Beste {naam},</p>
+      <p>Via onderstaande knop krijg je direct toegang tot de sleuteluitgiftepagina:</p>
+      <p>
+        <a href="{link}" style="background-color:#2196F3;color:white;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">
+          🔑 Open Sleuteluitgiftepagina
+        </a>
+      </p>
+      <p>Met vriendelijke groet,<br>Gemeente Opmeer</p>
+    </body>
+    </html>
+    """
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as server:
+            server.starttls()
+            server.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
+            server.send_message(msg)
+    except Exception as e:
+        print(f"[MAILFOUT] Sleuteluitgifte e-mail mislukt: {e}")
