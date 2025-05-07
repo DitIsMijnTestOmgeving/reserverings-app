@@ -1,22 +1,40 @@
-# 1_Beheer.py
 import streamlit as st
 from utils import get_supabase_client
 
+# Supabase client
 supa = get_supabase_client()
 
+# Pagina instellingen
 st.set_page_config(page_title="Beheer reserveringen", page_icon="🛠️", layout="wide")
 st.title("🛠️ Beheer reserveringen")
 
-# ➤ Verwerk goedkeuren/afwijzen via e-mail query params
+# Sidebar styling – icon-only en blokkeren op de hoofdpagina
+st.markdown("""
+<style>
+section[data-testid="stSidebar"] a[href$="/Beheer"] > span {
+    visibility: hidden;
+    position: relative;
+}
+section[data-testid="stSidebar"] a[href$="/Beheer"]::after {
+    content: "🛠️";
+    position: absolute;
+    left: 1.3rem;
+    font-size: 18px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ✅ Verwerk query uit e-mail
 params = st.query_params
 if "approve" in params and "res_id" in params:
-    res_id = int(params["res_id"])
+    res_id = int(params["res_id"][0])
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", res_id).execute()
     st.success(f"✅ Reservering #{res_id} is goedgekeurd.")
     st.query_params.clear()
     st.rerun()
+
 elif "reject" in params and "res_id" in params:
-    res_id = int(params["res_id"])
+    res_id = int(params["res_id"][0])
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", res_id).execute()
     st.error(f"❌ Reservering #{res_id} is afgewezen.")
     st.query_params.clear()
@@ -24,6 +42,7 @@ elif "reject" in params and "res_id" in params:
 
 # ▼ Openstaande aanvragen
 st.markdown("_Hieronder kun je openstaande aanvragen goedkeuren, afwijzen of verwijderen._")
+
 rows = supa.table("bookings").select("*").eq("status", "Wachten").order("date").execute().data
 
 if not rows:
@@ -32,13 +51,16 @@ else:
     for r in rows:
         with st.expander(f"🔔 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
             col1, col2, col3 = st.columns([1, 1, 1])
+
             if col1.button("✅ Goedkeuren", key=f"g{r['id']}"):
                 supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", r["id"]).execute()
                 st.success("Goedgekeurd.")
                 st.rerun()
+
             if col2.button("❌ Afwijzen", key=f"a{r['id']}"):
                 supa.table("bookings").update({"status": "Afgewezen"}).eq("id", r["id"]).execute()
                 st.rerun()
+
             if col3.button("🗑️ Verwijder", key=f"d{r['id']}"):
                 supa.table("bookings").delete().eq("id", r["id"]).execute()
                 st.rerun()
@@ -60,7 +82,6 @@ tabel_data = [
         "Status": x["status"]
     } for x in all_rows
 ]
-
 st.dataframe(tabel_data, height=450)
 
 # ▼ Handmatig verwijderen
