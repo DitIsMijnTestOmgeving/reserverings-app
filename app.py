@@ -3,6 +3,7 @@ import streamlit as st
 import datetime
 import time as systime
 from datetime import time
+import os
 from utils import (
     get_supabase_client,
     load_companies,
@@ -27,26 +28,28 @@ if "approve" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
     st.session_state["authorized"] = True
     st.query_params.clear()
-    st.switch_page("/pages/1_Beheer.py")
+    st.switch_page("🛠 Beheer")
 elif "reject" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
     st.session_state["authorized"] = True
     st.query_params.clear()
-    st.switch_page("/pages/1_Beheer.py")
+    st.switch_page("🛠 Beheer")
 
-# ➤ Verberg beheermodi standaard, tenzij geautoriseerd
+# ➤ Verberg beheeropties standaard
 if "authorized" not in st.session_state:
     st.session_state["authorized"] = False
 
 # ➤ Sidebar beveiliging
 st.sidebar.markdown("## Navigatie")
-if st.sidebar.button("🔐 Beheer toegang"):
-    code = st.sidebar.text_input("Voer toegangscode in:", type="password")
-    if code == "GEHEIM123":
+
+if not st.session_state["authorized"]:
+    code = st.sidebar.text_input("🔐 Toegangscode", type="password", placeholder="Beheer toegang")
+    if code == os.environ.get("TOEGANGSCODE", "GEHEIM123"):
         st.session_state["authorized"] = True
-        st.success("Beheer ontgrendeld.")
-    else:
-        st.error("Ongeldige toegangscode.")
+        st.sidebar.success("Beheer ontgrendeld.")
+        st.rerun()
+    elif code:
+        st.sidebar.error("Ongeldige toegangscode.")
 
 # ➤ Sidebar navigatie
 st.sidebar.page_link("app.py", label="📅 Reserveren")
@@ -54,7 +57,7 @@ if st.session_state["authorized"]:
     st.sidebar.page_link("pages/1_Beheer.py", label="🛠 Beheer")
     st.sidebar.page_link("pages/2_Sleuteluitgifte.py", label="🔑 Sleuteluitgifte")
 
-# ➤ UI Reserveren
+# ➤ UI Reservering aanvragen
 st.title("Sleutelreservering aanvragen")
 
 bedrijven = load_companies()

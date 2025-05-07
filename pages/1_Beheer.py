@@ -1,18 +1,37 @@
 import streamlit as st
+import os
 from utils import get_supabase_client, send_confirmation_email
 
-supa = get_supabase_client()
-
+# ✅ Pagina-instellingen
 st.set_page_config(page_title="Beheer reserveringen", page_icon="🛠️", layout="wide")
-st.title("🛠️ Beheer reserveringen")
 
-# Alleen toegang als de juiste geheime query is meegegeven
+# 🛡️ Extra beveiliging via geheime querystring (optioneel, zet 'TOEGANGSCODE' in .streamlit/secrets.toml)
 params = st.query_params
-if params.get("key", [""])[0] != st.secrets.get("TOEGANGSCODE"):
-    st.error("⛔ Geen toegang tot deze pagina.")
+if "TOEGANGSCODE" in st.secrets:
+    if params.get("key", [""])[0] != st.secrets["TOEGANGSCODE"]:
+        st.error("⛔ Geen toegang tot deze pagina.")
+        st.stop()
+
+# 🔐 Wachtwoordbeveiliging
+if "beheer_toegang" not in st.session_state:
+    st.session_state["beheer_toegang"] = False
+
+if not st.session_state["beheer_toegang"]:
+    wachtwoord = st.text_input("Voer beheerderswachtwoord in:", type="password")
+    if st.button("Inloggen"):
+        if wachtwoord == os.environ.get("BEHEER_WACHTWOORD"):
+            st.session_state["beheer_toegang"] = True
+            st.rerun()
+        else:
+            st.error("❌ Ongeldig wachtwoord.")
     st.stop()
 
-# ✅ Verwerk query vanuit e-mail
+# ✅ Supabase client
+supa = get_supabase_client()
+
+st.title("🛠️ Beheer reserveringen")
+
+# ✅ Verwerk goedkeuren/afwijzen vanuit e-mail
 if "approve" in params and "res_id" in params:
     res_id = int(params["res_id"][0])
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", res_id).execute()
@@ -53,7 +72,7 @@ else:
                 supa.table("bookings").delete().eq("id", r["id"]).execute()
                 st.rerun()
 
-# ▼ Tabel met alle reserveringen
+# ▼ Tabel: alle reserveringen
 st.subheader("📋 Alle reserveringen")
 all_rows = supa.table("bookings").select("*").order("date").execute().data
 
@@ -73,7 +92,7 @@ data = [
 
 st.dataframe(data, height=450)
 
-# ▼ Verwijderen
+# ▼ Handmatig verwijderen
 st.subheader("🗑️ Verwijder reservering")
 verwijderbare = [
     {"id": x["id"], "label": f"#{x['id']} – {x['name']} ({x['date']} {x['time']})"}

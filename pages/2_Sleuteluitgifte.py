@@ -3,16 +3,27 @@ import datetime
 from io import BytesIO
 from docx import Document
 from utils import get_supabase_client, load_keys, replace_bookmark_text
+import os
 
-# ✅ Alleen toegang met geheime code in URL
-params = st.query_params
-if params.get("auth") != ["beheer123"]:
-    st.error("❌ Geen toegang tot deze pagina.")
+# ✅ Pagina-instellingen
+st.set_page_config(page_title="Sleuteluitgifte", page_icon="🔑", layout="wide")
+
+# 🔐 Wachtwoordbeveiliging (gelijk aan Beheer)
+if "beheer_toegang" not in st.session_state:
+    st.session_state["beheer_toegang"] = False
+
+if not st.session_state["beheer_toegang"]:
+    wachtwoord = st.text_input("Voer beheerderswachtwoord in:", type="password")
+    if st.button("Inloggen"):
+        if wachtwoord == os.environ.get("BEHEER_WACHTWOORD"):
+            st.session_state["beheer_toegang"] = True
+            st.rerun()
+        else:
+            st.error("❌ Ongeldig wachtwoord.")
     st.stop()
 
+# ✅ Supabase ophalen
 supa = get_supabase_client()
-
-st.set_page_config(page_title="Sleuteluitgifte", page_icon="🔑", layout="wide")
 st.title("🔑 Sleuteluitgifte")
 
 key_map = load_keys()
@@ -30,13 +41,13 @@ for r in bookings:
         if not s:
             continue
         if status == "Wachten":
-            kleur_per_sleutel[s] = "#ffff99"  # geel
+            kleur_per_sleutel[s] = "#ffff99"
         elif status == "Goedgekeurd":
-            kleur_per_sleutel[s] = "#ffb347"  # oranje
+            kleur_per_sleutel[s] = "#ffb347"
         elif str(status).startswith("Uitgegeven op"):
-            kleur_per_sleutel[s] = "#ff6961"  # rood
+            kleur_per_sleutel[s] = "#ff6961"
         elif str(status).startswith("Ingeleverd op"):
-            kleur_per_sleutel[s] = "#90ee90"  # groen
+            kleur_per_sleutel[s] = "#90ee90"
 
 # ➤ Tegeloverzicht
 alle_sleutels = sorted(set(k.strip() for v in key_map.values() for k in v.split(",")), key=lambda x: int(x))
@@ -77,7 +88,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ➤ Uitgifte goedgekeurde reserveringen
+# ➤ Sleutels uitgeven
 st.markdown("### 📄 Sleutels uitgeven")
 
 if "uitgifte_buffer" not in st.session_state:
@@ -141,3 +152,4 @@ if uitgegeven:
                 st.rerun()
 else:
     st.info("Geen sleutels om retour te melden.")
+
