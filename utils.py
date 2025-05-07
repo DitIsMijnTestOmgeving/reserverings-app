@@ -96,7 +96,9 @@ def send_owner_email(res_id, name, date, time):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[Reservering] Nieuwe aanvraag #{res_id}"
     msg["From"] = os.environ["SMTP_USER"]
-    msg["To"] = os.environ["OWNER_EMAIL"]
+    msg["To"] = "bdielissen@opmeer.nl"
+    #msg["To"] = os.environ["OWNER_EMAIL"]
+    #msg["To"] = ", ".join(["bdielissen@opmeer.nl", "tkok@opmeer.nl"])
 
     html = f"""
     <html>
