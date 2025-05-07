@@ -93,7 +93,6 @@ def send_owner_email(res_id, name, date, time):
     reject_link = f"https://reserveringsapp-opmeer.onrender.com/Beheer?reject=true&res_id={res_id}"
     beheer_link = "https://reserveringsapp-opmeer.onrender.com/Beheer?via=mail"
 
-
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[Reservering] Nieuwe aanvraag #{res_id}"
     msg["From"] = os.environ["SMTP_USER"]
@@ -176,6 +175,7 @@ def send_confirmation_email(email, name, date, time):
     except Exception as e:
         print(f"[MAILFOUT] Bevestigingsmail mislukt: {e}")
 
+
 def send_access_link_email(email, naam="Gebruiker"):
     link = "https://reserveringsapp-opmeer.onrender.com/Sleuteluitgifte?via=mail"
 
@@ -194,10 +194,22 @@ def send_access_link_email(email, naam="Gebruiker"):
           🔑 Open Sleuteluitgiftepagina
         </a>
       </p>
+
+      <hr>
+
+      <h3 style="font-size:16px;">Handleiding sleuteluitgifte</h3>
+      <ul>
+        <li><b>📄 Sleutels uitgeven:</b> klik op een reservering, genereer het formulier, download en bevestig uitgifte.</li>
+        <li><b>🔁 Sleutels retourmelden:</b> scrol naar beneden en klik op ‘markeer als ingeleverd’.</li>
+        <li><b>Kleurenoverzicht:</b> 🟨 Wachten | 🟧 Goedgekeurd | 🟥 Uitgegeven | 🟩 Ingeleverd</li>
+      </ul>
+
+      <p>Deze link werkt zonder wachtwoord.</p>
       <p>Met vriendelijke groet,<br>Gemeente Opmeer</p>
     </body>
     </html>
     """
+
     msg.attach(MIMEText(html, "html"))
 
     try:
