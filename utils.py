@@ -91,7 +91,8 @@ def send_owner_email(res_id, name, date, time):
     print(f"[MAILTEST] Verstuur poging voor reservering #{res_id}")
     approve_link = f"https://reserveringsapp-opmeer.onrender.com/Beheer?approve=true&res_id={res_id}"
     reject_link = f"https://reserveringsapp-opmeer.onrender.com/Beheer?reject=true&res_id={res_id}"
-    beheer_link = "https://reserveringsapp-opmeer.onrender.com/Beheer"
+    beheer_link = "https://reserveringsapp-opmeer.onrender.com/Beheer?via=mail"
+
 
     msg = MIMEMultipart("alternative")
     msg["Subject"] = f"[Reservering] Nieuwe aanvraag #{res_id}"

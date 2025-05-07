@@ -8,7 +8,12 @@ st.set_page_config(page_title="Beheer reserveringen", page_icon="🛠️", layou
 
 # Query parameters ophalen
 params = st.query_params
-via_link = ("approve" in params or "reject" in params) and "res_id" in params
+via_link = (
+    ("approve" in params and "res_id" in params)
+    or ("reject" in params and "res_id" in params)
+    or ("via" in params and params.get("via") == "mail")
+)
+
 
 # Wachtwoordbeveiliging (overslaan bij goedkeur-/afwijslink)
 if "beheer_toegang" not in st.session_state:
