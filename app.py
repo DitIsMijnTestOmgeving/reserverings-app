@@ -1,24 +1,12 @@
+# ✅ app.py
 import streamlit as st
 import datetime
-import time as systime
 from datetime import time
+from utils import get_supabase_client, load_companies, load_keys, send_owner_email
 
-from utils import (
-    get_supabase_client,
-    load_companies,
-    load_keys,
-    send_owner_email
-)
+st.set_page_config(page_title="Sleutelreservering", page_icon="📅", layout="wide", initial_sidebar_state="collapsed")
 
-# ➤ Pagina instellingen
-st.set_page_config(
-    page_title="Sleutelreservering",
-    page_icon="📅",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-# Verander de titel in de sidebar van 'app' naar 'Reserveren'
+# CSS: iconen & knopbeveiliging
 st.markdown("""
 <style>
 /* 📅 Reserveren */
@@ -33,19 +21,14 @@ section[data-testid="stSidebar"] a[href="/"]::after {
     font-size: 18px;
 }
 
-/* 🛠 Beheer - verberg en blokkeer enkel op '/' */
-body:has(main[data-testid="stAppViewContainer"] h1:has-text("Sleutelreservering aanvragen")) 
+/* 🛠 Beheer & 🔑 Sleuteluitgifte verbergen op hoofdpagina */
+body:has(main:has(h1:contains(Sleutelreservering))) 
   section[data-testid="stSidebar"] a[href$="/Beheer"],
-body:has(main[data-testid="stAppViewContainer"] h1:has-text("Sleutelreservering aanvragen")) 
-  section[data-testid="stSidebar"] a[href$="/Beheer"] * {
-    color: transparent !important;
-    pointer-events: none !important;
-}
-
-/* 🔑 Sleuteluigifte - verberg en blokkeer enkel op '/' */
-body:has(main[data-testid="stAppViewContainer"] h1:has-text("Sleutelreservering aanvragen")) 
+body:has(main:has(h1:contains(Sleutelreservering))) 
+  section[data-testid="stSidebar"] a[href$="/Beheer"] *,
+body:has(main:has(h1:contains(Sleutelreservering))) 
   section[data-testid="stSidebar"] a[href$="/Uitgifte"],
-body:has(main[data-testid="stAppViewContainer"] h1:has-text("Sleutelreservering aanvragen")) 
+body:has(main:has(h1:contains(Sleutelreservering))) 
   section[data-testid="stSidebar"] a[href$="/Uitgifte"] * {
     color: transparent !important;
     pointer-events: none !important;
@@ -53,12 +36,7 @@ body:has(main[data-testid="stAppViewContainer"] h1:has-text("Sleutelreservering 
 </style>
 """, unsafe_allow_html=True)
 
-
-# ➤ Supabase
 supa = get_supabase_client()
-
-# ➤ Verwerk goedkeuren/afwijzen via e-mail-link (bijv. ?approve=true&res_id=123)
-# ➤ UI
 st.title("Sleutelreservering aanvragen")
 
 bedrijven = load_companies()
@@ -71,9 +49,7 @@ tijd = st.time_input("Tijd", value=time(8, 0))
 tijd_str = tijd.strftime("%H:%M")
 
 toegang = st.checkbox("Toegang tot locatie(s)?")
-locaties = []
-if toegang:
-    locaties = st.multiselect("Selecteer locatie(s)", sorted(load_keys().keys()))
+locaties = st.multiselect("Selecteer locatie(s)", sorted(load_keys().keys())) if toegang else []
 
 if st.button("Verstuur aanvraag"):
     key_map = load_keys()
