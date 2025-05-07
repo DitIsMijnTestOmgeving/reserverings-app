@@ -6,10 +6,12 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import smtplib
 
+
 def get_supabase_client():
     url = os.environ["SUPABASE_URL"]
     key = os.environ["SUPABASE_KEY"]
     return create_client(url, key)
+
 
 def load_companies():
     return {
@@ -32,6 +34,7 @@ def load_companies():
         "Van Lierop": "info@vanlierop.nl",
         "Vastenburg": "info@vastenburg.nl"
     }
+
 
 def load_keys():
     return {
@@ -68,6 +71,7 @@ def load_keys():
         "Zwembad De Weijver": "38, 39"
     }
 
+
 def replace_bookmark_text(doc, bookmark_name, replacement_text):
     for bookmark_start in doc.element.xpath(f'//w:bookmarkStart[@w:name="{bookmark_name}"]'):
         parent = bookmark_start.getparent()
@@ -81,6 +85,7 @@ def replace_bookmark_text(doc, bookmark_name, replacement_text):
         text.text = replacement_text
         run.append(text)
         parent.insert(index + 1, run)
+
 
 def send_owner_email(res_id, name, date, time):
     print(f"[MAILTEST] Verstuur poging voor reservering #{res_id}")
@@ -137,3 +142,35 @@ def send_owner_email(res_id, name, date, time):
         server.starttls()
         server.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
         server.send_message(msg)
+
+
+def send_confirmation_email(email, name, date, time):
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = f"Bevestiging sleutelreservering – {date}"
+    msg["From"] = os.environ["SMTP_USER"]
+    msg["To"] = email
+
+    html = f"""
+    <html>
+    <body style="font-family:Arial,sans-serif;font-size:14px;">
+      <p>Beste {name},</p>
+      <p>Jouw sleutelreservering is goedgekeurd:</p>
+      <p>
+        <b>Datum:</b> {date}<br>
+        <b>Tijd:</b> {time}<br>
+      </p>
+      <p>Je ontvangt de sleutels volgens afspraak.</p>
+      <p>Met vriendelijke groet,<br>Gemeente Opmeer</p>
+    </body>
+    </html>
+    """
+
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as server:
+            server.starttls()
+            server.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
+            server.send_message(msg)
+    except Exception as e:
+        print(f"[MAILFOUT] Bevestigingsmail mislukt: {e}")

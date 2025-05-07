@@ -1,3 +1,4 @@
+# ✅ 2_Sleuteluitgifte.py
 import streamlit as st
 import datetime
 from io import BytesIO
@@ -5,10 +6,10 @@ from docx import Document
 from utils import get_supabase_client, load_keys, replace_bookmark_text
 import os
 
-# ✅ Pagina-instellingen
+# Pagina-instellingen
 st.set_page_config(page_title="Sleuteluitgifte", page_icon="🔑", layout="wide")
 
-# 🔐 Wachtwoordbeveiliging (gelijk aan Beheer)
+# Wachtwoordbeveiliging
 if "beheer_toegang" not in st.session_state:
     st.session_state["beheer_toegang"] = False
 
@@ -22,14 +23,14 @@ if not st.session_state["beheer_toegang"]:
             st.error("❌ Ongeldig wachtwoord.")
     st.stop()
 
-# ✅ Supabase ophalen
+# Supabase verbinding
 supa = get_supabase_client()
 st.title("🔑 Sleuteluitgifte")
 
 key_map = load_keys()
 bookings = supa.table("bookings").select("*").execute().data
 
-# ➤ Statuskleur per sleutelnummer
+# Statuskleur per sleutelnummer
 kleur_per_sleutel = {}
 for r in bookings:
     status = r.get("status", "")
@@ -49,7 +50,7 @@ for r in bookings:
         elif str(status).startswith("Ingeleverd op"):
             kleur_per_sleutel[s] = "#90ee90"
 
-# ➤ Tegeloverzicht
+# Tegeloverzicht
 alle_sleutels = sorted(set(k.strip() for v in key_map.values() for k in v.split(",")), key=lambda x: int(x))
 html = """
 <style>
@@ -78,7 +79,7 @@ for nr in alle_sleutels:
 html += "</div>"
 st.markdown(html, unsafe_allow_html=True)
 
-# ➤ Legenda
+# Legenda
 st.markdown("""
 <div style='margin-top: 10px; font-size: 14px;'>
 🟨 <b>Wachten</b><br>
@@ -88,7 +89,7 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# ➤ Sleutels uitgeven
+# Sleutels uitgeven
 st.markdown("### 📄 Sleutels uitgeven")
 
 if "uitgifte_buffer" not in st.session_state:
@@ -133,7 +134,7 @@ for r in goedgekeurd:
                 st.session_state["uitgifte_id"] = None
                 st.rerun()
 
-# ➤ Retourmelden
+# Sleutels retourmelden
 st.markdown("### 🔁 Sleutels retourmelden")
 uitgegeven = [r for r in bookings if str(r["status"]).startswith("Uitgegeven op")]
 if uitgegeven:
@@ -152,4 +153,3 @@ if uitgegeven:
                 st.rerun()
 else:
     st.info("Geen sleutels om retour te melden.")
-

@@ -1,9 +1,7 @@
-# app.py
+# ✅ app.py
 import streamlit as st
 import datetime
-import time as systime
 from datetime import time
-import os
 from utils import (
     get_supabase_client,
     load_companies,
@@ -11,7 +9,7 @@ from utils import (
     send_owner_email
 )
 
-# ➤ Pagina instellingen
+# Pagina-instellingen
 st.set_page_config(
     page_title="Sleutelreservering",
     page_icon="📅",
@@ -19,45 +17,28 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# ➤ Supabase
+# Supabase verbinding
 supa = get_supabase_client()
 
-# ➤ Verwerk goedkeuren/afwijzen via e-mail-link (bijv. ?approve=true&res_id=123)
+# Verwerk e-mailacties (goedkeuren / afwijzen)
 params = st.query_params
 if "approve" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", int(params["res_id"][0])).execute()
-    st.session_state["authorized"] = True
+    st.session_state["beheer_toegang"] = True
     st.query_params.clear()
     st.switch_page("🛠 Beheer")
 elif "reject" in params and "res_id" in params:
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", int(params["res_id"][0])).execute()
-    st.session_state["authorized"] = True
+    st.session_state["beheer_toegang"] = True
     st.query_params.clear()
-    st.switch_page("🛠 Beheer")
+    st.switch_page("🔑 Sleuteluitgifte")
 
-# ➤ Verberg beheeropties standaard
-if "authorized" not in st.session_state:
-    st.session_state["authorized"] = False
-
-# ➤ Sidebar beveiliging
-st.sidebar.markdown("## Navigatie")
-
-if not st.session_state["authorized"]:
-    code = st.sidebar.text_input("🔐 Toegangscode", type="password", placeholder="Beheer toegang")
-    if code == os.environ.get("TOEGANGSCODE", "GEHEIM123"):
-        st.session_state["authorized"] = True
-        st.sidebar.success("Beheer ontgrendeld.")
-        st.rerun()
-    elif code:
-        st.sidebar.error("Ongeldige toegangscode.")
-
-# ➤ Sidebar navigatie
+# Sidebar navigatie (zonder invoervelden)
 st.sidebar.page_link("app.py", label="📅 Reserveren")
-if st.session_state["authorized"]:
-    st.sidebar.page_link("pages/1_Beheer.py", label="🛠 Beheer")
-    st.sidebar.page_link("pages/2_Sleuteluitgifte.py", label="🔑 Sleuteluitgifte")
+st.sidebar.page_link("pages/1_Beheer.py", label="🛠 Beheer")
+st.sidebar.page_link("pages/2_Sleuteluitgifte.py", label="🔑 Sleuteluitgifte")
 
-# ➤ UI Reservering aanvragen
+# Hoofdpagina: Sleutelreservering aanvragen
 st.title("Sleutelreservering aanvragen")
 
 bedrijven = load_companies()

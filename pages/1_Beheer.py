@@ -1,18 +1,12 @@
+# ✅ 1_Beheer.py
 import streamlit as st
 import os
-from utils import get_supabase_client, send_confirmation_email
+from utils import get_supabase_client
 
-# ✅ Pagina-instellingen
+# Pagina-instellingen
 st.set_page_config(page_title="Beheer reserveringen", page_icon="🛠️", layout="wide")
 
-# 🛡️ Extra beveiliging via geheime querystring (optioneel, zet 'TOEGANGSCODE' in .streamlit/secrets.toml)
-params = st.query_params
-if "TOEGANGSCODE" in st.secrets:
-    if params.get("key", [""])[0] != st.secrets["TOEGANGSCODE"]:
-        st.error("⛔ Geen toegang tot deze pagina.")
-        st.stop()
-
-# 🔐 Wachtwoordbeveiliging
+# Wachtwoordbeveiliging
 if "beheer_toegang" not in st.session_state:
     st.session_state["beheer_toegang"] = False
 
@@ -26,19 +20,19 @@ if not st.session_state["beheer_toegang"]:
             st.error("❌ Ongeldig wachtwoord.")
     st.stop()
 
-# ✅ Supabase client
+# Supabase client
 supa = get_supabase_client()
 
 st.title("🛠️ Beheer reserveringen")
 
-# ✅ Verwerk goedkeuren/afwijzen vanuit e-mail
+# Verwerk goedkeuren/afwijzen via e-mail
+params = st.query_params
 if "approve" in params and "res_id" in params:
     res_id = int(params["res_id"][0])
     supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", res_id).execute()
     st.success(f"✅ Reservering #{res_id} is goedgekeurd.")
     st.query_params.clear()
     st.rerun()
-
 elif "reject" in params and "res_id" in params:
     res_id = int(params["res_id"][0])
     supa.table("bookings").update({"status": "Afgewezen"}).eq("id", res_id).execute()
@@ -46,9 +40,8 @@ elif "reject" in params and "res_id" in params:
     st.query_params.clear()
     st.rerun()
 
-# ▼ Openstaande aanvragen
+# Openstaande aanvragen
 st.markdown("_Hieronder kun je openstaande aanvragen goedkeuren, afwijzen of verwijderen._")
-
 rows = supa.table("bookings").select("*").eq("status", "Wachten").order("date").execute().data
 
 if not rows:
@@ -57,22 +50,18 @@ else:
     for r in rows:
         with st.expander(f"🔔 #{r['id']} – {r['name']} ({r['date']} {r['time']})"):
             col1, col2, col3 = st.columns([1, 1, 1])
-
             if col1.button("✅ Goedkeuren", key=f"g{r['id']}"):
                 supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", r["id"]).execute()
-                send_confirmation_email(r["email"], r["name"], r["date"], r["time"])
                 st.success("Goedgekeurd.")
                 st.rerun()
-
             if col2.button("❌ Afwijzen", key=f"a{r['id']}"):
                 supa.table("bookings").update({"status": "Afgewezen"}).eq("id", r["id"]).execute()
                 st.rerun()
-
-            if col3.button("🗑️ Verwijderen", key=f"d{r['id']}"):
+            if col3.button("🗑️ Verwijder", key=f"d{r['id']}"):
                 supa.table("bookings").delete().eq("id", r["id"]).execute()
                 st.rerun()
 
-# ▼ Tabel: alle reserveringen
+# Tabel met alle reserveringen
 st.subheader("📋 Alle reserveringen")
 all_rows = supa.table("bookings").select("*").order("date").execute().data
 
@@ -92,7 +81,7 @@ data = [
 
 st.dataframe(data, height=450)
 
-# ▼ Handmatig verwijderen
+# Handmatig verwijderen
 st.subheader("🗑️ Verwijder reservering")
 verwijderbare = [
     {"id": x["id"], "label": f"#{x['id']} – {x['name']} ({x['date']} {x['time']})"}
