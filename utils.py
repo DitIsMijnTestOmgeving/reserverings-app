@@ -179,39 +179,41 @@ def send_confirmation_email(email, name, date, time):
 def send_access_link_email(email, naam="Gebruiker"):
     link = "https://reserveringsapp-opmeer.onrender.com/Sleuteluitgifte?via=mail"
 
-    msg = MIMEMultipart("alternative")
+    msg = MIMEMultipart("mixed")
     msg["Subject"] = "Toegang tot Sleuteluitgiftepagina"
     msg["From"] = os.environ["SMTP_USER"]
     msg["To"] = email
 
+    # HTML met alleen knop
     html = f"""
     <html>
     <body style="font-family:Arial,sans-serif;font-size:14px;">
       <p>Beste {naam},</p>
       <p>Via onderstaande knop krijg je direct toegang tot de sleuteluitgiftepagina:</p>
       <p>
-        <a href="{link}" style="background-color:#2196F3;color:white;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">
+        <a href="{link}" style="background-color:#2196F3;color:white;padding:12px 20px;
+          text-decoration:none;border-radius:6px;display:inline-block;">
           🔑 Open Sleuteluitgiftepagina
         </a>
       </p>
-
-      <hr>
-
-      <h3 style="font-size:16px;">Handleiding sleuteluitgifte</h3>
-      <ul>
-        <li><b>📄 Sleutels uitgeven:</b> klik op een reservering, genereer het formulier, download en bevestig uitgifte.</li>
-        <li><b>🔁 Sleutels retourmelden:</b> scrol naar beneden en klik op ‘markeer als ingeleverd’.</li>
-        <li><b>Kleurenoverzicht:</b> 🟨 Wachten | 🟧 Goedgekeurd | 🟥 Uitgegeven | 🟩 Ingeleverd</li>
-      </ul>
-
-      <p>Deze link werkt zonder wachtwoord.</p>
+      <p>De instructie is toegevoegd als PDF-bijlage.</p>
       <p>Met vriendelijke groet,<br>Gemeente Opmeer</p>
     </body>
     </html>
     """
-
     msg.attach(MIMEText(html, "html"))
 
+    # Voeg PDF-bijlage toe
+    try:
+        with open("Sleuteluitgifte uitleg.pdf", "rb") as f:
+            from email.mime.application import MIMEApplication
+            part = MIMEApplication(f.read(), _subtype="pdf")
+            part.add_header('Content-Disposition', 'attachment', filename="Sleuteluitgifte uitleg.pdf")
+            msg.attach(part)
+    except Exception as e:
+        print(f"[PDF-ERROR] Kan PDF niet bijvoegen: {e}")
+
+    # Versturen
     try:
         with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as server:
             server.starttls()
@@ -219,3 +221,5 @@ def send_access_link_email(email, naam="Gebruiker"):
             server.send_message(msg)
     except Exception as e:
         print(f"[MAILFOUT] Sleuteluitgifte e-mail mislukt: {e}")
+
+ 
