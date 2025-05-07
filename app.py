@@ -1,15 +1,37 @@
-# ✅ app.py
 import streamlit as st
 import datetime
+import time as systime
 from datetime import time
-from utils import get_supabase_client, load_companies, load_keys, send_owner_email
 
-st.set_page_config(page_title="Sleutelreservering", page_icon="📅", layout="wide", initial_sidebar_state="collapsed")
+from utils import (
+    get_supabase_client,
+    load_companies,
+    load_keys,
+    send_owner_email
+)
 
-# CSS: iconen & knopbeveiliging
+# ➤ Pagina instellingen
+st.set_page_config(
+    page_title="Sleutelreservering",
+    page_icon="📅",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# ➤ Sidebar styling – Beheer en Uitgifte blokkeren op hoofdpagina, iconen tonen
 st.markdown("""
 <style>
-/* 📅 Reserveren */
+/* Alleen op hoofdpagina: verberg en blokkeer Beheer + Sleuteluitgifte */
+body:has(h1:contains("Sleutelreservering aanvragen")) section[data-testid="stSidebar"] a[href$="/Beheer"],
+body:has(h1:contains("Sleutelreservering aanvragen")) section[data-testid="stSidebar"] a[href$="/Beheer"] *,
+body:has(h1:contains("Sleutelreservering aanvragen")) section[data-testid="stSidebar"] a[href$="/Uitgifte"],
+body:has(h1:contains("Sleutelreservering aanvragen")) section[data-testid="stSidebar"] a[href$="/Uitgifte"] * {
+    color: transparent !important;
+    pointer-events: none !important;
+    user-select: none;
+}
+
+/* Icon-only voor Reserveren (deze pagina) */
 section[data-testid="stSidebar"] a[href="/"] > span {
     visibility: hidden;
     position: relative;
@@ -21,22 +43,36 @@ section[data-testid="stSidebar"] a[href="/"]::after {
     font-size: 18px;
 }
 
-/* 🛠 Beheer & 🔑 Sleuteluitgifte verbergen op hoofdpagina */
-body:has(main:has(h1:contains(Sleutelreservering))) 
-  section[data-testid="stSidebar"] a[href$="/Beheer"],
-body:has(main:has(h1:contains(Sleutelreservering))) 
-  section[data-testid="stSidebar"] a[href$="/Beheer"] *,
-body:has(main:has(h1:contains(Sleutelreservering))) 
-  section[data-testid="stSidebar"] a[href$="/Uitgifte"],
-body:has(main:has(h1:contains(Sleutelreservering))) 
-  section[data-testid="stSidebar"] a[href$="/Uitgifte"] * {
-    color: transparent !important;
-    pointer-events: none !important;
+/* Icon-only voor Beheer */
+section[data-testid="stSidebar"] a[href$="/Beheer"] > span {
+    visibility: hidden;
+    position: relative;
+}
+section[data-testid="stSidebar"] a[href$="/Beheer"]::after {
+    content: "🛠️";
+    position: absolute;
+    left: 1.3rem;
+    font-size: 18px;
+}
+
+/* Icon-only voor Sleuteluitgifte */
+section[data-testid="stSidebar"] a[href$="/Uitgifte"] > span {
+    visibility: hidden;
+    position: relative;
+}
+section[data-testid="stSidebar"] a[href$="/Uitgifte"]::after {
+    content: "🔑";
+    position: absolute;
+    left: 1.3rem;
+    font-size: 18px;
 }
 </style>
 """, unsafe_allow_html=True)
 
+# ➤ Supabase client
 supa = get_supabase_client()
+
+# ➤ UI: Reserveringsformulier
 st.title("Sleutelreservering aanvragen")
 
 bedrijven = load_companies()
@@ -49,7 +85,9 @@ tijd = st.time_input("Tijd", value=time(8, 0))
 tijd_str = tijd.strftime("%H:%M")
 
 toegang = st.checkbox("Toegang tot locatie(s)?")
-locaties = st.multiselect("Selecteer locatie(s)", sorted(load_keys().keys())) if toegang else []
+locaties = []
+if toegang:
+    locaties = st.multiselect("Selecteer locatie(s)", sorted(load_keys().keys()))
 
 if st.button("Verstuur aanvraag"):
     key_map = load_keys()
