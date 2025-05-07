@@ -45,7 +45,7 @@ for r in bookings:
         if not s:
             continue
         if status == "Wachten":
-            kleur_per_sleutel[s] = "#ffff99"
+            kleur_per_sleutel[s] = "#d3d3d3"  # lichtgrijs
         elif status == "Goedgekeurd":
             kleur_per_sleutel[s] = "#ffb347"
         elif str(status).startswith("Uitgegeven op"):
@@ -85,8 +85,8 @@ st.markdown(html, unsafe_allow_html=True)
 # Legenda
 st.markdown("""
 <div style='margin-top: 10px; font-size: 14px;'>
-🟨 <b>Wachten</b><br>
-🟧 <b>Goedgekeurd</b><br>
+⬜ <b>Wachten</b><br>
+🟨 <b>Goedgekeurd</b><br>
 🟥 <b>Uitgegeven</b><br>
 🟩 <b>Ingeleverd</b>
 </div>
