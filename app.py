@@ -69,5 +69,12 @@ if st.button("Verstuur aanvraag"):
     }
     res = supa.table("bookings").insert(data).execute()
     res_id = res.data[0]["id"]
-    send_owner_email(res_id, bedrijf, datum, tijd_str)
-    st.success("✅ Aanvraag succesvol verzonden!")
+
+    try:
+        send_owner_email(res_id, bedrijf, datum, tijd_str)
+        st.success("✅ Aanvraag succesvol verzonden!")
+    except Exception as e:
+        st.error("❌ Aanvraag opgeslagen, maar e-mail kon niet worden verzonden.")
+        st.exception(e)
+
+
