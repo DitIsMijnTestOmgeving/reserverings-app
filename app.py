@@ -4,7 +4,7 @@ import datetime
 from PIL import Image
 import base64
 from io import BytesIO
-from datetime import time
+from datetime import time, timedelta, datetime
 from utils import (
     get_supabase_client,
     load_companies,
@@ -66,8 +66,23 @@ email = bedrijven[bedrijf]
 #st.text_input("E-mail", value=email, disabled=True)
 
 datum = st.date_input("Datum")
-tijd = st.time_input("Tijd", value=time(8, 0))
-tijd_str = tijd.strftime("%H:%M")
+
+from datetime import time, timedelta, datetime
+
+# Genereer tijdslijst van 08:00 tot 18:00 in stappen van 15 minuten
+tijden = []
+start = datetime.strptime("08:00", "%H:%M")
+end = datetime.strptime("18:00", "%H:%M")
+while start <= end:
+    tijden.append(start.strftime("%H:%M"))
+    start += timedelta(minutes=15)
+
+# Toon dropdown
+tijd_str = st.selectbox("Tijd", tijden)
+
+
+#tijd = st.time_input("Tijd", value=time(8, 0))
+#tijd_str = tijd.strftime("%H:%M")
 
 toegang = st.checkbox("Toegang tot locatie(s)?")
 locaties = []
