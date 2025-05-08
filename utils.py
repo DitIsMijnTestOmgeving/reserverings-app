@@ -97,7 +97,6 @@ def send_owner_email(res_id, name, date, time):
     msg["Subject"] = f"[Reservering] Nieuwe aanvraag #{res_id}"
     msg["From"] = os.environ["SMTP_USER"]
     msg["To"] = os.environ["OWNER_EMAIL"]
-    #msg["To"] = ", ".join(["bdielissen@opmeer.nl", "tkok@opmeer.nl"])
 
     html = f"""
     <html>
@@ -109,34 +108,17 @@ def send_owner_email(res_id, name, date, time):
         <b>Datum:</b> {date}<br>
         <b>Tijd:</b> {time}
       </p>
-
       <table cellspacing="10" cellpadding="0">
-        <tr>
-          <td>
-            <a href="{approve_link}" style="background-color:#4CAF50;color:white;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">
-              ✅ Goedkeuren
-            </a>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <a href="{reject_link}" style="background-color:#f44336;color:white;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">
-              ❌ Afwijzen
-            </a>
-          </td>
-        </tr>
-        <tr>
-          <td>
-            <a href="{beheer_link}" style="background-color:#2196F3;color:white;padding:12px 20px;text-decoration:none;border-radius:6px;display:inline-block;">
-              🔑 Beheerpagina openen
-            </a>
-          </td>
-        </tr>
+        <tr><td><a href="{approve_link}" style="background-color:#4CAF50;color:white;padding:12px 20px;
+        text-decoration:none;border-radius:6px;display:inline-block;">✅ Goedkeuren</a></td></tr>
+        <tr><td><a href="{reject_link}" style="background-color:#f44336;color:white;padding:12px 20px;
+        text-decoration:none;border-radius:6px;display:inline-block;">❌ Afwijzen</a></td></tr>
+        <tr><td><a href="{beheer_link}" style="background-color:#2196F3;color:white;padding:12px 20px;
+        text-decoration:none;border-radius:6px;display:inline-block;">🔑 Beheerpagina openen</a></td></tr>
       </table>
     </body>
     </html>
     """
-
     msg.attach(MIMEText(html, "html"))
 
     with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as server:
@@ -156,16 +138,12 @@ def send_confirmation_email(email, name, date, time):
     <body style="font-family:Arial,sans-serif;font-size:14px;">
       <p>Beste {name},</p>
       <p>Jouw sleutelreservering is goedgekeurd:</p>
-      <p>
-        <b>Datum:</b> {date}<br>
-        <b>Tijd:</b> {time}<br>
-      </p>
+      <p><b>Datum:</b> {date}<br><b>Tijd:</b> {time}</p>
       <p>Je ontvangt de sleutels volgens afspraak.</p>
       <p>Met vriendelijke groet,<br>Gemeente Opmeer</p>
     </body>
     </html>
     """
-
     msg.attach(MIMEText(html, "html"))
 
     try:
@@ -180,23 +158,19 @@ def send_confirmation_email(email, name, date, time):
 def send_access_link_email(email, naam="Gebruiker"):
     link = "https://reserveringsapp-opmeer.onrender.com/Sleuteluitgifte?via=mail"
 
-    msg = MIMEMultipart("mixed")
+    msg = MIMEMultipart("related")
     msg["Subject"] = "Toegang tot Sleuteluitgiftepagina"
     msg["From"] = os.environ["SMTP_USER"]
     msg["To"] = email
 
-    # HTML met alleen knop
     html = f"""
     <html>
     <body style="font-family:Arial,sans-serif;font-size:14px;">
+      <img src="cid:logo" style="width:200px;margin-bottom:20px;"><br>
       <p>Beste {naam},</p>
       <p>Via onderstaande knop krijg je direct toegang tot de sleuteluitgiftepagina:</p>
-      <p>
-        <a href="{link}" style="background-color:#2196F3;color:white;padding:12px 20px;
-          text-decoration:none;border-radius:6px;display:inline-block;">
-          🔑 Open Sleuteluitgiftepagina
-        </a>
-      </p>
+      <p><a href="{link}" style="background-color:#2196F3;color:white;padding:12px 20px;
+      text-decoration:none;border-radius:6px;display:inline-block;">🔑 Open Sleuteluitgiftepagina</a></p>
       <p>De instructie is toegevoegd als PDF-bijlage.</p>
       <p>Met vriendelijke groet,<br>Gemeente Opmeer</p>
     </body>
@@ -204,17 +178,28 @@ def send_access_link_email(email, naam="Gebruiker"):
     """
     msg.attach(MIMEText(html, "html"))
 
-    # Voeg PDF-bijlage toe
+    # Voeg logo toe
     try:
+        from email.mime.image import MIMEImage
+        with open("Opmeer.png", "rb") as img:
+            image = MIMEImage(img.read())
+            image.add_header("Content-ID", "<logo>")
+            image.add_header("Content-Disposition", "inline", filename="Opmeer.png")
+            msg.attach(image)
+    except Exception as e:
+        print(f"[AFBEELDING] Fout bij toevoegen afbeelding: {e}")
+
+    # Voeg PDF toe
+    try:
+        from email.mime.application import MIMEApplication
         with open("Sleuteluitgifte uitleg.pdf", "rb") as f:
-            from email.mime.application import MIMEApplication
             part = MIMEApplication(f.read(), _subtype="pdf")
             part.add_header('Content-Disposition', 'attachment', filename="Sleuteluitgifte uitleg.pdf")
             msg.attach(part)
     except Exception as e:
         print(f"[PDF-ERROR] Kan PDF niet bijvoegen: {e}")
 
-    # Versturen
+    # Verstuur
     try:
         with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as server:
             server.starttls()
@@ -222,5 +207,3 @@ def send_access_link_email(email, naam="Gebruiker"):
             server.send_message(msg)
     except Exception as e:
         print(f"[MAILFOUT] Sleuteluitgifte e-mail mislukt: {e}")
-
- 
