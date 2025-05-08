@@ -63,7 +63,7 @@ st.title("Sleutelreservering aanvragen")
 bedrijven = load_companies()
 bedrijf = st.selectbox("Bedrijf", sorted(bedrijven.keys()))
 email = bedrijven[bedrijf]
-st.text_input("E-mail", value=email, disabled=True)
+#st.text_input("E-mail", value=email, disabled=True)
 
 datum = st.date_input("Datum")
 tijd = st.time_input("Tijd", value=time(8, 0))
