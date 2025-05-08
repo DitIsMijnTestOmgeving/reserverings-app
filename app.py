@@ -1,6 +1,9 @@
 # ✅ app.py
 import streamlit as st
 import datetime
+from PIL import Image
+import base64
+from io import BytesIO
 from datetime import time
 from utils import (
     get_supabase_client,
@@ -17,11 +20,21 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-from PIL import Image
-
-# Toon logo bovenaan
+# Laad en converteer logo naar base64
 logo = Image.open("Opmeer.png")
-st.image(logo, use_column_width=False)
+buffer = BytesIO()
+logo.save(buffer, format="PNG")
+encoded_logo = base64.b64encode(buffer.getvalue()).decode()
+
+# Toon logo rechts uitgelijnd
+st.markdown(
+    f"""
+    <div style="text-align: right;">
+        <img src="data:image/png;base64,{encoded_logo}" alt="Logo" style="height:80px;" />
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # Supabase verbinding
 supa = get_supabase_client()
