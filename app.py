@@ -17,6 +17,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+from PIL import Image
+
+# Toon logo bovenaan
+logo = Image.open("Opmeer.png")
+st.image(logo, use_column_width=False)
+
 # Supabase verbinding
 supa = get_supabase_client()
 
