@@ -30,7 +30,7 @@ encoded_logo = base64.b64encode(buffer.getvalue()).decode()
 st.markdown(
     f"""
     <div style="text-align: right;">
-        <img src="data:image/png;base64,{encoded_logo}" alt="Logo" style="height:80px;" />
+        <img src="data:image/png;base64,{encoded_logo}" alt="Logo" style="height:200px;" />
     </div>
     """,
     unsafe_allow_html=True
