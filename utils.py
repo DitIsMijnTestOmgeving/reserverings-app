@@ -207,3 +207,20 @@ def send_access_link_email(email, naam="Gebruiker"):
             server.send_message(msg)
     except Exception as e:
         print(f"[MAILFOUT] Sleuteluitgifte e-mail mislukt: {e}")
+
+def send_simple_email(to, subject, body):
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = os.environ["SMTP_USER"]
+    msg["To"] = to
+
+    html = f"<html><body><p>{body}</p></body></html>"
+    msg.attach(MIMEText(html, "html"))
+
+    try:
+        with smtplib.SMTP(os.environ["SMTP_SERVER"], int(os.environ["SMTP_PORT"])) as server:
+            server.starttls()
+            server.login(os.environ["SMTP_USER"], os.environ["SMTP_PASSWORD"])
+            server.send_message(msg)
+    except Exception as e:
+        print(f"[MAILFOUT] E-mail verzenden mislukt: {e}")

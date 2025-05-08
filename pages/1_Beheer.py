@@ -2,6 +2,7 @@
 import streamlit as st
 import os
 from utils import get_supabase_client, send_access_link_email
+from utils import send_simple_email
 
 # Pagina-instellingen
 st.set_page_config(page_title="Beheer reserveringen", page_icon="🛠️", layout="wide")
@@ -74,6 +75,7 @@ else:
             col1, col2, col3 = st.columns([1, 1, 1])
             if col1.button("✅ Goedkeuren", key=f"g{r['id']}"):
                 supa.table("bookings").update({"status": "Goedgekeurd"}).eq("id", r["id"]).execute()
+                send_simple_email("bdielissen@opmeer.nl", f"Reservering #{r['id']} goedgekeurd", "De reservering is goedgekeurd.")
                 st.success("Goedgekeurd.")
                 st.rerun()
             if col2.button("❌ Afwijzen", key=f"a{r['id']}"):
